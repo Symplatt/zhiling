@@ -1,0 +1,275 @@
+{
+  "version": 1,
+  "title": "云川旧事",
+  "description": "一场江湖旧梦，十二个人的命运交织。",
+  "characters": [
+    {
+      "id": "huaying",
+      "name": "花盈",
+      "group": "花家",
+      "color": "#4f8072",
+      "notes": "花家长女，温柔而坚韧。\n\n曾在云川渡口救下梓夜，自此卷入一段被尘封的江湖往事。她想守护的，从来不是家族的名望，而是身边每一个人。",
+      "tags": [
+        "主角",
+        "医者"
+      ]
+    },
+    {
+      "id": "hualing",
+      "name": "花绫",
+      "group": "花家",
+      "color": "#4f8072",
+      "notes": "花盈的妹妹，聪慧灵动，擅长机关术。",
+      "tags": [
+        "机关师"
+      ]
+    },
+    {
+      "id": "hualianyue",
+      "name": "花怜月",
+      "group": "花家",
+      "color": "#4f8072",
+      "notes": "花家家主，藏着关于云川的秘密。",
+      "tags": [
+        "家主"
+      ]
+    },
+    {
+      "id": "ziye",
+      "name": "梓夜",
+      "group": "云岫门",
+      "color": "#8480a7",
+      "notes": "身世成谜的少年剑客，云栖月的关门弟子。",
+      "tags": [
+        "主角",
+        "剑客"
+      ]
+    },
+    {
+      "id": "yunqiyue",
+      "name": "云栖月",
+      "group": "云岫门",
+      "color": "#8480a7",
+      "notes": "云岫门掌门，清冷寡言。与花怜月有一段旧交。",
+      "tags": [
+        "掌门"
+      ]
+    },
+    {
+      "id": "shenqinghe",
+      "name": "沈清和",
+      "group": "云岫门",
+      "color": "#8480a7",
+      "notes": "云岫门首徒，为人谦和，行事周全。",
+      "tags": [
+        "大师兄"
+      ]
+    },
+    {
+      "id": "luzhaochuan",
+      "name": "陆照川",
+      "group": "江湖散客",
+      "color": "#a97f5c",
+      "notes": "浪迹江湖的游侠，酒壶从不离身。",
+      "tags": [
+        "游侠"
+      ]
+    },
+    {
+      "id": "suwansheng",
+      "name": "苏晚声",
+      "group": "江湖散客",
+      "color": "#a97f5c",
+      "notes": "听雨楼说书人，知晓许多不为人知的往事。",
+      "tags": [
+        "说书人"
+      ]
+    },
+    {
+      "id": "wenjingtang",
+      "name": "温景棠",
+      "group": "江湖散客",
+      "color": "#a97f5c",
+      "notes": "行走江湖的商人，消息灵通。",
+      "tags": [
+        "商人"
+      ]
+    },
+    {
+      "id": "moxuan",
+      "name": "墨玄",
+      "group": "玄影阁",
+      "color": "#678ca3",
+      "notes": "玄影阁主，目标始终无人知晓。",
+      "tags": [
+        "阁主"
+      ]
+    },
+    {
+      "id": "yeweilan",
+      "name": "叶微澜",
+      "group": "玄影阁",
+      "color": "#678ca3",
+      "notes": "玄影阁情报使，与花绫相识于微时。",
+      "tags": [
+        "情报使"
+      ]
+    },
+    {
+      "id": "guchangfeng",
+      "name": "顾长风",
+      "group": "玄影阁",
+      "color": "#678ca3",
+      "notes": "墨玄的心腹，身负一笔旧债。",
+      "tags": [
+        "护卫"
+      ]
+    }
+  ],
+  "relations": [
+    {
+      "id": "r1",
+      "from": "huaying",
+      "to": "hualing",
+      "label": "姐姐",
+      "direction": "one-way",
+      "description": ""
+    },
+    {
+      "id": "r2",
+      "from": "hualianyue",
+      "to": "huaying",
+      "label": "母亲",
+      "direction": "one-way",
+      "description": ""
+    },
+    {
+      "id": "r3",
+      "from": "hualianyue",
+      "to": "hualing",
+      "label": "母亲",
+      "direction": "one-way",
+      "description": ""
+    },
+    {
+      "id": "r4",
+      "from": "huaying",
+      "to": "ziye",
+      "label": "知己",
+      "direction": "two-way",
+      "description": ""
+    },
+    {
+      "id": "r5",
+      "from": "yunqiyue",
+      "to": "ziye",
+      "label": "师父",
+      "direction": "one-way",
+      "description": ""
+    },
+    {
+      "id": "r6",
+      "from": "shenqinghe",
+      "to": "ziye",
+      "label": "师兄",
+      "direction": "one-way",
+      "description": ""
+    },
+    {
+      "id": "r7",
+      "from": "yunqiyue",
+      "to": "shenqinghe",
+      "label": "师父",
+      "direction": "one-way",
+      "description": ""
+    },
+    {
+      "id": "r8",
+      "from": "yunqiyue",
+      "to": "hualianyue",
+      "label": "故交",
+      "direction": "two-way",
+      "description": ""
+    },
+    {
+      "id": "r9",
+      "from": "huaying",
+      "to": "luzhaochuan",
+      "label": "朋友",
+      "direction": "two-way",
+      "description": ""
+    },
+    {
+      "id": "r10",
+      "from": "luzhaochuan",
+      "to": "suwansheng",
+      "label": "挚友",
+      "direction": "two-way",
+      "description": ""
+    },
+    {
+      "id": "r11",
+      "from": "suwansheng",
+      "to": "wenjingtang",
+      "label": "合作",
+      "direction": "two-way",
+      "description": ""
+    },
+    {
+      "id": "r12",
+      "from": "wenjingtang",
+      "to": "huaying",
+      "label": "相助",
+      "direction": "one-way",
+      "description": ""
+    },
+    {
+      "id": "r13",
+      "from": "moxuan",
+      "to": "yunqiyue",
+      "label": "宿敌",
+      "direction": "two-way",
+      "description": ""
+    },
+    {
+      "id": "r14",
+      "from": "moxuan",
+      "to": "yeweilan",
+      "label": "阁主",
+      "direction": "one-way",
+      "description": ""
+    },
+    {
+      "id": "r15",
+      "from": "moxuan",
+      "to": "guchangfeng",
+      "label": "阁主",
+      "direction": "one-way",
+      "description": ""
+    },
+    {
+      "id": "r16",
+      "from": "yeweilan",
+      "to": "hualing",
+      "label": "好友",
+      "direction": "two-way",
+      "description": ""
+    },
+    {
+      "id": "r17",
+      "from": "guchangfeng",
+      "to": "luzhaochuan",
+      "label": "旧识",
+      "direction": "two-way",
+      "description": ""
+    },
+    {
+      "id": "r18",
+      "from": "ziye",
+      "to": "moxuan",
+      "label": "追查",
+      "direction": "one-way",
+      "description": ""
+    }
+  ]
+}

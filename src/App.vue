@@ -213,13 +213,12 @@ const {
               <span
                 class="avatar small-avatar"
                 :style="{ '--character-color': c.color || palette[0] }"
-                ><span>{{ c.name }}</span></span
-              ><span class="character-list-info"
-                ><strong>{{ c.name }}</strong
-                ><small>{{ c.group || "未分组" }}</small></span
-              ><span v-if="c.tags?.includes('主角')" class="lead-mark"
-                >主角</span
-              ><ChevronRight v-if="character?.id === c.id" :size="14" />
+                ><span>{{ c.name }}</span>
+              </span>
+              <span class="character-list-info">
+                <strong>{{ c.name }}</strong>
+                <small>{{ c.group || "未分组" }}</small>
+              </span>
             </button>
             <div v-if="!characters.length" class="list-empty">
               <Search :size="22" />
@@ -264,11 +263,7 @@ const {
           </button>
         </section> -->
         <div class="graph-toolbar">
-          <div class="view-label">
-            <Network :size="16" /><span>关系视图</span>
-          </div>
-          <span class="vertical-divider"></span
-          ><button class="toolbar-button" @click="graph?.arrange()">
+          <button class="toolbar-button" @click="graph?.arrange()">
             <Sparkles :size="15" />自动布局</button
           ><button
             class="toolbar-button"

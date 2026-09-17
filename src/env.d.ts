@@ -9,7 +9,7 @@ interface Window {
     save: (data: unknown) => Promise<void>
     importJson: () => Promise<{ data: unknown; warnings: string[] } | null>
     exportJson: (data: unknown) => Promise<boolean>
-    chooseAvatar: () => Promise<string | null>
+    exportImage: (data: ArrayBuffer, title: string) => Promise<boolean>
     onClosing: (callback: () => void) => void
     close: () => Promise<void>
   }

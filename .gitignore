@@ -3,3 +3,6 @@ dist/
 release/
 test-results/
 .vite/
+data/
+logs/
+runtime/

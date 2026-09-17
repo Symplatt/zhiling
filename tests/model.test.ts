@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parseAtlas, addCharacter, removeCharacter, avatarIsSafe } from '../src/model'
+import { parseAtlas, addCharacter, removeCharacter, splitTags, relationLabel, relationFrom } from '../src/model'
 import { createSample } from '../src/sample'
 describe('关系网数据完整性', () => {
   it('兼容需求文档的最小 JSON，并生成稳定关系 ID', () => {
@@ -39,12 +39,19 @@ describe('关系网数据完整性', () => {
     expect(result.characters[0]!.birthday).toBe('初一')
     expect(result.custom).toEqual({ author: '作者' })
   })
-  it('拒绝外部或可执行头像，返回可读提示', () => {
+  it('旧头像字段被移除，其他角色信息保留', () => {
     const data = createSample(); data.characters[0]!.avatar = 'https://example.com/tracking.png'
-    expect(parseAtlas(data).warnings.length).toBe(1)
-    expect(parseAtlas(data).data.characters[0]!.avatar).toBe('')
-    expect(avatarIsSafe('data:image/svg+xml;base64,aaaa')).toBe(false)
-    expect(avatarIsSafe('data:image/png;base64,aGVsbG8=')).toBe(true)
+    expect(parseAtlas(data).data.characters[0]!.avatar).toBeUndefined()
+    expect(parseAtlas(data).data.characters[0]!.name).toBe('花盈')
+  })
+  it('空格分隔标签并去重',()=>{expect(splitTags('  侠客 仙子\t金丹后期 仙子 ')).toEqual(['侠客','仙子','金丹后期'])})
+  it('成对的双向关系按人物视角反转，共同关系不反转',()=>{
+    const r={id:'r',from:'a',to:'b',label:'母亲',reverseLabel:'女儿',direction:'two-way' as const,mode:'paired' as const}
+    expect(relationLabel(r)).toBe('母亲/女儿')
+    expect(relationFrom(r,'a')).toBe('母亲 / 对方：女儿')
+    expect(relationFrom(r,'b')).toBe('女儿 / 对方：母亲')
+    expect(relationLabel({...r,mode:'shared',label:'母女'})).toBe('母女')
+    expect(()=>parseAtlas({characters:[{id:'a',name:'甲'},{id:'b',name:'乙'}],relations:[{...r,reverseLabel:''}]})).toThrow('B 对 A')
   })
   it('接受空图与 500 角色关系网', () => {
     expect(parseAtlas({ characters: [], relations: [] }).data.characters).toEqual([])

@@ -4,7 +4,7 @@ contextBridge.exposeInMainWorld('desktop', {
   save: data => ipcRenderer.invoke('atlas:save', data),
   importJson: () => ipcRenderer.invoke('atlas:import'),
   exportJson: data => ipcRenderer.invoke('atlas:export', data),
-  chooseAvatar: () => ipcRenderer.invoke('atlas:avatar'),
+  exportImage: (buffer,title) => ipcRenderer.invoke('atlas:image',buffer,title),
   onClosing: callback => ipcRenderer.on('atlas:closing', () => callback()),
   close: () => ipcRenderer.invoke('atlas:close')
 })

@@ -1,8 +1,8 @@
 {
   "name": "novel-atlas",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
-  "description": "知交 · 小说角色关系网",
+  "description": "织灵 · 小说角色关系网",
   "author": "Novel Atlas",
   "type": "module",
   "main": "electron/main.cjs",
@@ -11,6 +11,7 @@
     "build": "vue-tsc --noEmit && vite build",
     "desktop": "npm run build && electron .",
     "test": "vitest run",
+    "start": "node server/start.cjs",
     "pack": "node node_modules/electron/install.js && npm run build && electron-builder --win portable --x64"
   },
   "dependencies": {
@@ -33,13 +34,14 @@
   "build": {
     "electronDist": "node_modules/electron/dist",
     "appId": "com.novelatlas.desktop",
-    "productName": "角色关系网",
+    "productName": "织灵",
     "directories": {
       "output": "release"
     },
     "files": [
       "dist/**/*",
       "electron/**/*",
+      "server/store.cjs",
       "build/icon.ico",
       "package.json"
     ],
@@ -50,7 +52,7 @@
       "signExecutable": false
     },
     "portable": {
-      "artifactName": "角色关系网.exe"
+      "artifactName": "织灵.exe"
     }
   }
 }

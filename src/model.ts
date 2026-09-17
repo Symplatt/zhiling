@@ -1,10 +1,11 @@
 export const palette = ['#4f8072', '#a97f5c', '#8480a7', '#678ca3', '#b27081', '#798660']
 export interface Character {
-  id: string; name: string; avatar?: string; group?: string; color?: string; notes?: string; tags?: string[]
+  id: string; name: string; group?: string; color?: string; notes?: string; tags?: string[]
   [key: string]: unknown
 }
 export interface Relation {
   id: string; from: string; to: string; label: string; direction: 'one-way' | 'two-way'; description?: string
+  mode?: 'shared' | 'paired'; reverseLabel?: string
   [key: string]: unknown
 }
 export interface Atlas {
@@ -14,8 +15,11 @@ export interface Atlas {
 export function uid(prefix: string) { return `${prefix}-${crypto.randomUUID()}` }
 const object = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v)
 const str = (v: unknown, fallback = '') => typeof v === 'string' ? v : fallback
-export function avatarIsSafe(value: string) {
-  return /^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/=\r\n]+$/.test(value)
+export function splitTags(value: string) { return [...new Set(value.trim().split(/\s+/u).filter(Boolean))] }
+export function relationLabel(r: Relation) { return r.direction === 'two-way' && r.mode === 'paired' ? `${r.label}/${r.reverseLabel || ''}` : r.label }
+export function relationFrom(r: Relation, id: string) {
+  if (r.direction === 'two-way' && r.mode === 'paired') return id === r.from ? `${r.label} / 对方：${r.reverseLabel}` : `${r.reverseLabel} / 对方：${r.label}`
+  return r.direction === 'two-way' ? r.label : id === r.from ? `→ ${r.label}` : `← ${r.label}`
 }
 export function parseAtlas(input: unknown): { data: Atlas; warnings: string[] } {
   if (!object(input) || !Array.isArray(input.characters) || !Array.isArray(input.relations)) throw new Error('文件需要包含 characters 和 relations 两个数组。')
@@ -28,10 +32,8 @@ export function parseAtlas(input: unknown): { data: Atlas; warnings: string[] } 
     if (ids.has(id)) throw new Error(`角色 ID「${id}」重复。请为每个角色设置唯一 ID 后重新导入。`)
     ids.add(id)
     if (name.length > 60 || id.length > 200) throw new Error(`角色「${name.slice(0, 20)}」的名称或 ID 过长。`)
-    let avatar = str(raw.avatar)
-    if (avatar && !avatarIsSafe(avatar)) { warnings.push(`「${name}」的头像未载入，请在角色详情中重新选择本地图片。`); avatar = '' }
-    if (avatar.length > 7_000_000) throw new Error(`「${name}」头像过大，请使用小于 5 MB 的图片。`)
-    return { ...raw, id, name, avatar, group: str(raw.group, '未分组'), color: /^#[0-9a-f]{6}$/i.test(str(raw.color)) ? str(raw.color) : palette[0], notes: str(raw.notes), tags: Array.isArray(raw.tags) ? raw.tags.filter((x): x is string => typeof x === 'string') : [] }
+    const { avatar: _legacyAvatar, ...fields } = raw
+    return { ...fields, id, name, group: str(raw.group, '未分组'), color: /^#[0-9a-f]{6}$/i.test(str(raw.color)) ? str(raw.color) : palette[0], notes: str(raw.notes), tags: typeof raw.tags === 'string' ? splitTags(raw.tags) : Array.isArray(raw.tags) ? raw.tags.filter((x): x is string => typeof x === 'string') : [] }
   })
   const relations = input.relations.map((raw, i): Relation => {
     if (!object(raw)) throw new Error(`第 ${i + 1} 条关系格式不正确。`)
@@ -41,7 +43,9 @@ export function parseAtlas(input: unknown): { data: Atlas; warnings: string[] } 
     if (edgeIds.has(id)) throw new Error(`关系 ID「${id}」重复。`)
     edgeIds.add(id)
     if (raw.direction !== undefined && raw.direction !== 'one-way' && raw.direction !== 'two-way') throw new Error(`第 ${i + 1} 条关系的 direction 需要为 one-way 或 two-way。`)
-    return { ...raw, id, from, to, label: str(raw.label, '关联'), direction: raw.direction === 'two-way' ? 'two-way' : 'one-way', description: str(raw.description) }
+    const mode = raw.mode === 'paired' ? 'paired' : 'shared'
+    if (raw.direction === 'two-way' && mode === 'paired' && !str(raw.reverseLabel).trim()) throw new Error(`第 ${i + 1} 条关系缺少 B 对 A 的关系。`)
+    return { ...raw, id, from, to, label: str(raw.label, '关联'), direction: raw.direction === 'two-way' ? 'two-way' : 'one-way', mode, reverseLabel: str(raw.reverseLabel), description: str(raw.description) }
   })
   return { data: { ...input, version: 1, title: str(input.title, '未命名故事'), description: str(input.description), characters, relations }, warnings }
 }

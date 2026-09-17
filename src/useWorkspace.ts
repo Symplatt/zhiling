@@ -1,8 +1,8 @@
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type RelationshipGraph from './components/RelationshipGraph.vue'
-import { type Atlas, type Character, type Relation, palette, parseAtlas, uid, clone, addCharacter, removeCharacter, splitTags, relationLabel, relationFrom } from './model'
-import { createSample } from './sample'
 import { createLibrary, parseLibrary, story, themes, type Library, type Theme } from './library'
+import { addCharacter, clone, palette, parseAtlas, relationFrom, relationLabel, removeCharacter, splitTags, uid, type Atlas, type Character, type Relation } from './model'
+import { createSample } from './sample'
 import { loadWorkspace, saveWorkspace, storageDescription } from './storage'
 
 export function useWorkspace() {

@@ -1,99 +1,232 @@
 // Synthetic fixtures only; run in the isolated test service on port 5175.
-const results=[];
-await page.reload({waitUntil:'networkidle'});
-globalThis.zhilingErrors=[];
-const initialCount=Number((await page.locator('.project-card .eyebrow').innerText()).match(/(\d+) \/ 1000/)[1]);
-const fixture={version:1,title:'织灵交互测试',description:'合成测试数据',characters:[{id:'a',name:'青禾',group:'一组'},{id:'b',name:'月白',group:'二组'},{id:'c',name:'星河',group:'二组'}],relations:[{id:'r',from:'a',to:'b',label:'母亲',reverseLabel:'女儿',mode:'paired',direction:'two-way'}]};
-async function importData(value){await page.locator('input[type=file]').setInputFiles({name:'test.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(value))});await page.getByRole('button',{name:'确认导入',exact:true}).click();await expect(page.locator('.status-bar')).toContainText('已自动保存');}
+const results = [];
+await page.reload({ waitUntil: "networkidle" });
+globalThis.zhilingErrors = [];
+const initialCount = Number(
+  (await page.locator(".project-card .eyebrow").innerText()).match(
+    /(\d+) \/ 1000/,
+  )[1],
+);
+const fixture = {
+  version: 1,
+  title: "织灵交互测试",
+  description: "合成测试数据",
+  characters: [
+    { id: "a", name: "青禾", group: "一组" },
+    { id: "b", name: "月白", group: "二组" },
+    { id: "c", name: "星河", group: "二组" },
+  ],
+  relations: [
+    {
+      id: "r",
+      from: "a",
+      to: "b",
+      label: "母亲",
+      reverseLabel: "女儿",
+      mode: "paired",
+      direction: "two-way",
+    },
+  ],
+};
+async function importData(value) {
+  await page.locator("input[type=file]").setInputFiles({
+    name: "test.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(value)),
+  });
+  await page.getByRole("button", { name: "确认导入", exact: true }).click();
+  await expect(page.locator(".status-bar")).toContainText("已自动保存");
+}
 await importData(fixture);
-await expect(page.locator('.status-bar')).toContainText('3 位角色');
-await page.getByRole('button',{name:'新增角色',exact:true}).click();
-const bounds=await page.getByRole('dialog').boundingBox();const viewport=await page.evaluate(()=>({w:innerWidth,h:innerHeight}));
-expect(Math.abs(bounds.y+bounds.height/2-viewport.h/2)).toBeLessThan(3);
-expect(Math.abs(bounds.x+bounds.width/2-viewport.w/2)).toBeLessThan(3);
-expect(bounds.y).toBeGreaterThan(10);expect(bounds.y+bounds.height).toBeLessThan(viewport.h-10);
-await expect(page.getByRole('dialog')).not.toContainText('头像');
-await page.getByRole('textbox',{name:'角色名称'}).fill('流萤');
-await page.getByRole('textbox',{name:'角色标签'}).fill('侠客 仙子 金丹后期');
-await page.getByRole('dialog').getByRole('button',{name:'添加角色',exact:true}).click();
-await expect(page.locator('.tags span')).toHaveText(['侠客','仙子','金丹后期']);
-results.push('弹窗真实视口居中、无头像、空格分隔三标签');
-await page.getByRole('button',{name:'关闭详情',exact:true}).click();
-async function hoverNode(id){const point=await page.locator('.graph-engine').evaluate((el,id)=>{const p=el._cyreg.cy.getElementById('c:'+id).renderedPosition(),b=el.getBoundingClientRect();return{x:b.x+p.x,y:b.y+p.y}},id);await page.mouse.move(10,70);await page.mouse.move(point.x,point.y);}
-await hoverNode('a');
-await expect(page.getByRole('region',{name:'悬浮关系窗口'})).toContainText('青禾');
-await expect(page.locator('.floating-row')).toHaveCount(3);
-await expect(page.locator('.floating-relations')).toContainText('母亲 / 对方：女儿');
-await page.getByRole('button',{name:'固定青禾的关系窗口',exact:true}).click();
-await page.mouse.move(15,70);
-await expect(page.locator('.floating-relations .eyebrow')).toContainText('已固定');
-await hoverNode('b');
-await expect(page.locator('.floating-relations h2')).toContainText('青禾');
-await page.getByRole('button',{name:'固定月白的关系窗口',exact:true}).click();
-await expect(page.locator('.floating-relations')).toHaveCount(1);
-await expect(page.locator('.floating-relations h2')).toContainText('月白');
-await expect(page.locator('.floating-relations')).toContainText('女儿 / 对方：母亲');
-await page.getByRole('button',{name:'关闭悬浮关系窗口',exact:true}).click();
-await page.mouse.move(15,70);
-await expect(page.locator('.floating-relations')).toHaveCount(0);
-await hoverNode('c');
-await expect(page.locator('.floating-relations')).toContainText('暂无直接关系');
-await page.getByRole('button',{name:'固定星河的关系窗口',exact:true}).click();
-await page.getByRole('button',{name:'取消固定星河的关系窗口',exact:true}).click();
-await page.mouse.move(15,70);
-await expect(page.locator('.floating-relations')).toHaveCount(0);
-results.push('悬停展示所有角色状态、图钉固定/取消、唯一窗口替换、关闭不恢复旧窗口');
-await page.getByRole('button',{name:'添加关系',exact:true}).click();
-await page.getByRole('combobox',{name:'起点角色'}).selectOption('b');
-await page.getByRole('combobox',{name:'终点角色'}).selectOption('c');
-await page.getByRole('button',{name:'双向关系 起点 ↔ 终点'}).click();
-await page.getByRole('button',{name:'分别填写 · 母亲/女儿'}).click();
-await page.getByRole('textbox',{name:'A 对 B 的关系'}).fill('师父');
-await page.getByRole('textbox',{name:'B 对 A 的关系'}).fill('徒弟');
-await page.getByRole('button',{name:'保存关系',exact:true}).click();
-await expect(page.locator('.relation-profile h2')).toHaveText('师父/徒弟');
-await page.getByRole('button',{name:'编辑关系',exact:true}).click();
-await page.getByRole('button',{name:'共同关系 · 母女'}).click();
-await page.getByRole('textbox',{name:'共同关系',exact:true}).fill('师徒');
-await page.getByRole('button',{name:'保存关系',exact:true}).click();
-await expect(page.locator('.relation-profile h2')).toHaveText('师徒');
-results.push('双向关系分别填写及共同关系两种模式');
-await page.getByRole('button',{name:'关闭详情',exact:true}).click();
-await page.getByRole('button',{name:'图谱设置',exact:true}).click();
-const themeChecks=[];
-for(const [name,id] of [['黑白灰','mono'],['浅草','grass'],['桃粉','pink'],['碧蓝','blue'],['金夜','gold']]){
-  await page.getByRole('button',{name:new RegExp(name)}).click();
-  expect(await page.evaluate(()=>document.documentElement.dataset.theme)).toBe(id);
-  themeChecks.push(await page.locator('.canvas-wrap').evaluate(el=>getComputedStyle(el).backgroundColor));
+await expect(page.locator(".status-bar")).toContainText("3 位角色");
+await page.getByRole("button", { name: "新增角色", exact: true }).click();
+const bounds = await page.getByRole("dialog").boundingBox();
+const viewport = await page.evaluate(() => ({ w: innerWidth, h: innerHeight }));
+expect(Math.abs(bounds.y + bounds.height / 2 - viewport.h / 2)).toBeLessThan(3);
+expect(Math.abs(bounds.x + bounds.width / 2 - viewport.w / 2)).toBeLessThan(3);
+expect(bounds.y).toBeGreaterThan(10);
+expect(bounds.y + bounds.height).toBeLessThan(viewport.h - 10);
+await expect(page.getByRole("dialog")).not.toContainText("头像");
+await page.getByRole("textbox", { name: "角色名称" }).fill("流萤");
+await page
+  .getByRole("textbox", { name: "角色标签" })
+  .fill("侠客 仙子 金丹后期");
+await page
+  .getByRole("dialog")
+  .getByRole("button", { name: "添加角色", exact: true })
+  .click();
+await expect(page.locator(".tags span")).toHaveText([
+  "侠客",
+  "仙子",
+  "金丹后期",
+]);
+results.push("弹窗真实视口居中、无头像、空格分隔三标签");
+await page.getByRole("button", { name: "关闭详情", exact: true }).click();
+async function hoverNode(id) {
+  const point = await page.locator(".graph-engine").evaluate((el, id) => {
+    const p = el._cyreg.cy.getElementById("c:" + id).renderedPosition(),
+      b = el.getBoundingClientRect();
+    return { x: b.x + p.x, y: b.y + p.y };
+  }, id);
+  await page.mouse.move(10, 70);
+  await page.mouse.move(point.x, point.y);
+}
+await hoverNode("a");
+await expect(page.getByRole("region", { name: "悬浮关系窗口" })).toContainText(
+  "青禾",
+);
+await expect(page.locator(".floating-row")).toHaveCount(3);
+await expect(page.locator(".floating-relations")).toContainText(
+  "母亲 / 对方：女儿",
+);
+await page
+  .getByRole("button", { name: "固定当前关系窗口", exact: true })
+  .click();
+await page.mouse.move(15, 70);
+await expect(page.locator(".floating-relations .eyebrow")).toContainText(
+  "已固定",
+);
+await hoverNode("b");
+await expect(page.locator(".floating-relations h2")).toContainText("青禾");
+await page
+  .getByRole("button", { name: "取消固定关系窗口", exact: true })
+  .click();
+await hoverNode("b");
+await page
+  .getByRole("button", { name: "固定当前关系窗口", exact: true })
+  .click();
+await expect(page.locator(".floating-relations")).toHaveCount(1);
+await expect(page.locator(".floating-relations h2")).toContainText("月白");
+await expect(page.locator(".floating-relations")).toContainText(
+  "女儿 / 对方：母亲",
+);
+await page
+  .getByRole("button", { name: "关闭悬浮关系窗口", exact: true })
+  .click();
+await page.mouse.move(15, 70);
+await expect(page.locator(".floating-relations")).toHaveCount(0);
+await hoverNode("c");
+await expect(page.locator(".floating-relations")).toContainText("暂无直接关系");
+await page
+  .getByRole("button", { name: "固定当前关系窗口", exact: true })
+  .click();
+await page
+  .getByRole("button", { name: "取消固定关系窗口", exact: true })
+  .click();
+await page.mouse.move(15, 70);
+await expect(page.locator(".floating-relations")).toHaveCount(0);
+results.push(
+  "悬停展示所有角色状态、窗口图钉固定/取消、关闭不恢复旧窗口",
+);
+await page.getByRole("button", { name: "添加关系", exact: true }).click();
+await page.getByRole("combobox", { name: "起点角色" }).selectOption("b");
+await page.getByRole("combobox", { name: "终点角色" }).selectOption("c");
+await page.getByRole("button", { name: "双向关系 起点 ↔ 终点" }).click();
+await page.getByRole("button", { name: "分别填写 · A对B/B对A" }).click();
+await page.getByRole("textbox", { name: "A 对 B 的关系" }).fill("师父");
+await page.getByRole("textbox", { name: "B 对 A 的关系" }).fill("徒弟");
+await page.getByRole("button", { name: "保存关系", exact: true }).click();
+await expect(page.locator(".relation-profile h2")).toHaveText("师父/徒弟");
+await page.getByRole("button", { name: "编辑关系", exact: true }).click();
+await page.getByRole("button", { name: "共同关系 · 母女" }).click();
+await page.getByRole("textbox", { name: "共同关系", exact: true }).fill("师徒");
+await page.getByRole("button", { name: "保存关系", exact: true }).click();
+await expect(page.locator(".relation-profile h2")).toHaveText("师徒");
+results.push("双向关系分别填写及共同关系两种模式");
+await page.getByRole("button", { name: "关闭详情", exact: true }).click();
+await page.getByRole("button", { name: "图谱设置", exact: true }).click();
+const themeChecks = [];
+for (const [name, id] of [
+  ["黑白灰", "mono"],
+  ["浅草", "grass"],
+  ["桃粉", "pink"],
+  ["碧蓝", "blue"],
+  ["金夜", "gold"],
+]) {
+  await page.getByRole("button", { name: new RegExp(name) }).click();
+  expect(
+    await page.evaluate(() => document.documentElement.dataset.theme),
+  ).toBe(id);
+  themeChecks.push(
+    await page
+      .locator(".canvas-wrap")
+      .evaluate((el) => getComputedStyle(el).backgroundColor),
+  );
 }
 expect(new Set(themeChecks).size).toBe(5);
-await page.getByRole('button',{name:'完成',exact:true}).click();
-await expect(page.locator('.status-bar')).toContainText('已自动保存');
-await page.reload({waitUntil:'networkidle'});
-expect(await page.evaluate(()=>document.documentElement.dataset.theme)).toBe('gold');
-results.push('五种主题真实配色与刷新持久化');
-await page.getByRole('combobox',{name:'按阵营筛选'}).selectOption('一组');
-await page.evaluate(()=>{const original=URL.createObjectURL;URL.createObjectURL=function(blob){window.__zhilingExport=blob;return original.call(URL,blob)}});
-await page.getByRole('button',{name:'导出图片',exact:true}).click();
-await expect(page.getByRole('status')).toContainText('完整关系网 PNG');
-const png=await page.evaluate(async()=>{const blob=window.__zhilingExport,bitmap=await createImageBitmap(blob),bytes=new Uint8Array(await blob.arrayBuffer());return {type:blob.type,width:bitmap.width,height:bitmap.height,size:blob.size,signature:Array.from(bytes.slice(0,8))}});
-expect(png.type).toBe('image/png');expect(png.width).toBeGreaterThan(200);expect(png.height).toBeGreaterThan(200);expect(png.signature).toEqual([137,80,78,71,13,10,26,10]);
-const visible=await page.locator('.graph-engine').evaluate(el=>el._cyreg.cy.nodes(':visible').length);expect(visible).toBe(1);
-results.push({test:'筛选后仍可导出完整 PNG，画布筛选保持不变',png});
-await page.getByRole('combobox',{name:'按阵营筛选'}).selectOption('');
-const book={version:2,theme:'grass',activeId:'synthetic-0',graphs:Array.from({length:120},(_,i)=>({id:`synthetic-${i}`,updatedAt:new Date().toISOString(),data:{...fixture,title:`书架测试 ${i+1}`}}))};
+await page.getByRole("button", { name: "完成", exact: true }).click();
+await expect(page.locator(".status-bar")).toContainText("已自动保存");
+await page.reload({ waitUntil: "networkidle" });
+expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe(
+  "gold",
+);
+results.push("五种主题真实配色与刷新持久化");
+await page.getByRole("combobox", { name: "按阵营筛选" }).selectOption("一组");
+await page.evaluate(() => {
+  const original = URL.createObjectURL;
+  URL.createObjectURL = function (blob) {
+    window.__zhilingExport = blob;
+    return original.call(URL, blob);
+  };
+});
+await page.getByRole("button", { name: "导出图片", exact: true }).click();
+await expect(page.getByRole("status")).toContainText("完整关系网 PNG");
+const png = await page.evaluate(async () => {
+  const blob = window.__zhilingExport,
+    bitmap = await createImageBitmap(blob),
+    bytes = new Uint8Array(await blob.arrayBuffer());
+  return {
+    type: blob.type,
+    width: bitmap.width,
+    height: bitmap.height,
+    size: blob.size,
+    signature: Array.from(bytes.slice(0, 8)),
+  };
+});
+expect(png.type).toBe("image/png");
+expect(png.width).toBeGreaterThan(200);
+expect(png.height).toBeGreaterThan(200);
+expect(png.signature).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
+const visible = await page
+  .locator(".graph-engine")
+  .evaluate((el) => el._cyreg.cy.nodes(":visible").length);
+expect(visible).toBe(1);
+results.push({ test: "筛选后仍可导出完整 PNG，画布筛选保持不变", png });
+await page.getByRole("combobox", { name: "按阵营筛选" }).selectOption("");
+const book = {
+  version: 2,
+  theme: "grass",
+  activeId: "synthetic-0",
+  graphs: Array.from({ length: 120 }, (_, i) => ({
+    id: `synthetic-${i}`,
+    updatedAt: new Date().toISOString(),
+    data: { ...fixture, title: `书架测试 ${i + 1}` },
+  })),
+};
 await importData(book);
-await page.getByRole('button',{name:/切换关系网/}).filter({has:page.locator('svg')}).last().click();
-await expect(page.getByRole('dialog')).toContainText(`已保存 ${initialCount+121} 张`);
-await page.getByRole('textbox',{name:'搜索关系网',exact:true}).fill('书架测试 120');
-await page.locator('.book-open').click();
-await expect(page.locator('.project-title')).toHaveText('书架测试 120');
-await page.reload({waitUntil:'networkidle'});
-await expect(page.locator('.project-title')).toHaveText('书架测试 120');
-await page.getByRole('button',{name:'新建关系网',exact:true}).click();
-await page.getByRole('textbox',{name:'关系网名称',exact:true}).fill('独立的新故事');
-await page.getByRole('button',{name:'创建关系网',exact:true}).click();
-await expect(page.locator('.status-bar')).toContainText('0 位角色');
-await expect(page.locator('.project-card .eyebrow')).toContainText(`${initialCount+122} / 1000`);
-results.push('120 张关系网导入落盘、搜索切换、重载恢复、新建不覆盖');
-return {results,errors:globalThis.zhilingErrors};
+await page
+  .getByRole("button", { name: /切换关系网/ })
+  .filter({ has: page.locator("svg") })
+  .last()
+  .click();
+await expect(page.getByRole("dialog")).toContainText(
+  `已保存 ${initialCount + 121} 张`,
+);
+await page
+  .getByRole("textbox", { name: "搜索关系网", exact: true })
+  .fill("书架测试 120");
+await page.locator(".book-open").click();
+await expect(page.locator(".project-title")).toHaveText("书架测试 120");
+await page.reload({ waitUntil: "networkidle" });
+await expect(page.locator(".project-title")).toHaveText("书架测试 120");
+await page.getByRole("button", { name: "新建关系网", exact: true }).click();
+await page
+  .getByRole("textbox", { name: "关系网名称", exact: true })
+  .fill("独立的新故事");
+await page.getByRole("button", { name: "创建关系网", exact: true }).click();
+await expect(page.locator(".status-bar")).toContainText("0 位角色");
+await expect(page.locator(".project-card .eyebrow")).toContainText(
+  `${initialCount + 122} / 1000`,
+);
+results.push("120 张关系网导入落盘、搜索切换、重载恢复、新建不覆盖");
+return { results, errors: globalThis.zhilingErrors };

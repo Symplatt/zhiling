@@ -34,37 +34,37 @@
   --on-accent: #fff;
 }
 [data-theme="pink"] {
-  --text: #644351;
-  --green: #b45e80;
-  --green-dark: #984769;
-  --muted: #a07e8c;
-  --line: #efd9e1;
-  --paper: #eddee3;
-  --surface: #f3e7eb;
-  --sidebar: #e5d4dc;
-  --soft: #dfc4cf;
-  --input: #efdee5;
-  --node-bg: #f2e4e9;
-  --edge: #d5a3b8;
-  --dot: #ddb5c650;
-  --shadow: #68334620;
+  --text: #50464a;
+  --green: #92717c;
+  --green-dark: #775b65;
+  --muted: #887b80;
+  --line: #d5cbd0;
+  --paper: #e7e1e3;
+  --surface: #ede8ea;
+  --sidebar: #ded6d9;
+  --soft: #d8cbd0;
+  --input: #e8e1e4;
+  --node-bg: #ede6e9;
+  --edge: #b4a1a8;
+  --dot: #a8959d40;
+  --shadow: #50464a20;
   --on-accent: #fff;
 }
 [data-theme="blue"] {
-  --text: #2c4b64;
-  --green: #387eae;
-  --green-dark: #24628f;
-  --muted: #7795ab;
-  --line: #d5e7f2;
-  --paper: #dee8ef;
-  --surface: #e8eff3;
-  --sidebar: #d1dfe9;
-  --soft: #c3d8e7;
-  --input: #e1ebf1;
-  --node-bg: #e7eff4;
-  --edge: #92b9d2;
-  --dot: #9cc3da50;
-  --shadow: #21475e20;
+  --text: #414d55;
+  --green: #5f7786;
+  --green-dark: #4b626f;
+  --muted: #79858d;
+  --line: #cbd4da;
+  --paper: #e0e5e8;
+  --surface: #e8ecee;
+  --sidebar: #d4dde2;
+  --soft: #c9d5dc;
+  --input: #e1e7eb;
+  --node-bg: #e6ecef;
+  --edge: #9eafb9;
+  --dot: #90a4b040;
+  --shadow: #414d5520;
   --on-accent: #fff;
 }
 [data-theme="gold"] {
@@ -686,15 +686,10 @@ body,
   gap: 8px;
 }
 .help-author {
-  margin: 14px 0 18px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--line);
+  margin: 14px 0 0;
+  text-align: right;
   color: var(--muted);
   font-size: 12px;
-}
-.help-author strong {
-  color: var(--text);
-  font-weight: 500;
 }
 .character-colors {
   margin-bottom: 20px;
@@ -746,17 +741,8 @@ body,
   overflow-wrap: anywhere;
 }
 .self-reference {
-  display: inline-flex;
-  align-items: center;
   flex-shrink: 0;
-  gap: 1px;
-  padding: 2px 3px;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  background: var(--soft);
   color: var(--green);
-  font-size: 9px;
-  line-height: 1.2;
   white-space: nowrap;
 }
 .app-header {

@@ -8,7 +8,6 @@ const { modal } = useWorkspaceContext();
       织灵，帮你把脑海中的人物与故事连接起来。所有内容仅保存在本机，随时可以导出
       JSON 带走。
     </p>
-    <p class="help-author">作者：<strong>Symplatt</strong></p>
     <div class="help-step">
       <span>01</span>
       <div>
@@ -44,5 +43,6 @@ const { modal } = useWorkspaceContext();
     <div class="modal-actions">
       <button class="primary-button" @click="modal = ''">开始创作</button>
     </div>
+    <p class="help-author">© 2026 Symplatt 版权所有</p>
   </div>
 </template>

@@ -3,10 +3,10 @@ import { parseColorHistory } from './colors'
 export type Theme = 'mono' | 'grass' | 'pink' | 'blue' | 'gold'
 export const themes: { id: Theme; name: string; description: string; color: string; background: string }[] = [
   { id: 'mono', name: '黑白灰', description: '留白与秩序', color: '#555b64', background: '#e4e5e7' },
+  { id: 'gold', name: '黄金夜', description: '夜色中的微光', color: '#d6b86a', background: '#191b23' },
   { id: 'grass', name: '浅草', description: '草木间的清新', color: '#4c7655', background: '#f1f6eb' },
-  { id: 'pink', name: '桃粉', description: '温柔的春日', color: '#b66683', background: '#eddee3' },
-  { id: 'blue', name: '碧蓝', description: '晴空与远海', color: '#347eaa', background: '#dee8ef' },
-  { id: 'gold', name: '金夜', description: '夜色中的微光', color: '#d6b86a', background: '#191b23' }
+  { id: 'blue', name: '碧蓝', description: '雾里的远海', color: '#5f7786', background: '#e0e5e8' },
+  { id: 'pink', name: '桃粉', description: '淡淡的玫瑰', color: '#92717c', background: '#e7e1e3' }
 ]
 export interface Story { id: string; updatedAt: string; data: Atlas }
 export interface Library { version: 2; activeId: string; theme: Theme; graphs: Story[]; customColors?: string[] }

@@ -1,0 +1,32 @@
+assert.equal(page.url(),'http://127.0.0.1:5193/');
+if(await page.getByRole('button',{name:'关闭对话框'}).count())await page.getByRole('button',{name:'关闭对话框'}).click();
+await page.locator('.character-item').filter({hasText:'云栖月'}).click();
+await page.locator('.inspector-header').getByRole('button',{name:'编辑档案',exact:true}).click();
+const input=page.getByRole('textbox',{name:'自定义边框颜色',exact:true});
+await expect(page.locator('.preset-colors button')).toHaveCount(6);
+await input.fill('rgb(256,0,0)');await page.getByRole('button',{name:'使用颜色',exact:true}).click();
+await expect(page.locator('#custom-color-error')).toContainText('0–255');
+const colors=['#112233','#223344','#334455','#445566','#556677','#667788','#778899','#8899aa'];
+for(let i=0;i<colors.length;i++){
+ await input.fill(i===0?'rgb(17, 34, 51)':colors[i]);await page.getByRole('button',{name:'使用颜色',exact:true}).click();
+}
+await expect(page.locator('.recent-colors button')).toHaveCount(7);
+expect(await page.locator('.recent-colors button').evaluateAll(buttons=>buttons.map(b=>b.title))).toEqual(colors.slice(1));
+await input.fill('rgb(34,51,68)');await page.getByRole('button',{name:'使用颜色',exact:true}).click();
+expect(await page.locator('.recent-colors button').evaluateAll(buttons=>buttons.map(b=>b.title))).toEqual(colors.slice(1));
+await page.getByRole('button',{name:'自定义颜色 #8899aa',exact:true}).click();
+await expect(page.locator('.preset-colors button')).toHaveCount(6);
+await page.getByRole('button',{name:'保存修改',exact:true}).click();
+await expect(page.locator('.status-bar')).toContainText('已自动保存');
+const border=await page.locator('.graph-engine').evaluate(el=>{const n=el._cyreg.cy.$id('c:a');return {value:n.data('color'),rendered:n.style('border-color')};});
+assert.equal(border.value,'#8899aa');assert.equal(border.rendered,'rgb(136,153,170)');
+await page.reload({waitUntil:'networkidle'});await page.locator('.character-item').filter({hasText:'云栖月'}).click();
+await page.locator('.inspector-header').getByRole('button',{name:'编辑档案',exact:true}).click();
+expect(await page.locator('.recent-colors button').evaluateAll(buttons=>buttons.map(b=>b.title))).toEqual(colors.slice(1));
+await expect(page.getByRole('button',{name:'自定义颜色 #8899aa',exact:true})).toHaveAttribute('aria-pressed','true');
+const screenshot=await page.screenshot({fullPage:false});
+await page.getByRole('button',{name:'取消',exact:true}).click();
+await page.getByRole('button',{name:'使用帮助'}).click();await expect(page.getByRole('dialog')).toContainText('作者：Symplatt');
+const helpScreenshot=await page.screenshot({fullPage:false});
+await page.getByRole('button',{name:'关闭对话框'}).click();
+return {passed:true,colors:colors.slice(1),presets:6,fifoAndReload:true,border,author:'Symplatt',screenshot,helpScreenshot};

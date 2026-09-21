@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import cytoscape, { type Core, type LayoutOptions } from "cytoscape";
+import cytoscape, { type Core } from "cytoscape";
 import fcose from "cytoscape-fcose";
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { separateBoxes } from "../layout";
+import { graphLayoutOptions, ensureGraphSpacing } from "../graph/layout";
+import { graphStyles, applyGraphTheme } from "../graph/styles";
+import { applyGraphVisibility } from "../graph/selection";
+import { exportGraphImage } from "../graph/exportImage";
 import type { Atlas } from "../model";
 import { relationLabel } from "../model";
 cytoscape.use(fcose);
@@ -58,64 +61,16 @@ let cy: Core,
   activeLayout: ReturnType<Core["layout"]> | undefined;
 let priorIds = "";
 function applyVisibility() {
-  if (!cy) return;
-  cy.batch(() => {
-    cy.elements().removeClass("dimmed chosen hidden");
-    if (props.group) {
-      cy.nodes()
-        .filter((n) => n.data("group") !== props.group)
-        .addClass("hidden");
-      cy.edges()
-        .filter(
-          (e) => e.source().hasClass("hidden") || e.target().hasClass("hidden"),
-        )
-        .addClass("hidden");
-    }
-    const selected = cy.getElementById(props.selected);
-    if (selected.length) {
-      selected.addClass("chosen");
-      if (props.neighborhood)
-        cy.elements()
-          .difference(selected.closedNeighborhood())
-          .addClass("dimmed");
-    }
-    cy.edges().toggleClass("no-label", !props.labels);
-  });
+  applyGraphVisibility(cy, props);
 }
+
 function arrange() {
   if (!cy || !cy.nodes(":visible").length) return;
   activeLayout?.stop();
   const count = cy.nodes(":visible").length;
   activeLayout = cy
     .elements(":visible")
-    .layout(
-      props.layout === "circle"
-        ? {
-            name: "circle",
-            animate: false,
-            padding: 65,
-            avoidOverlap: true,
-            spacingFactor: 1.35,
-            nodeDimensionsIncludeLabels: true,
-          }
-        : ({
-            name: "fcose",
-            quality: "default",
-            randomize: true,
-            animate: false,
-            padding: 65,
-            nodeDimensionsIncludeLabels: true,
-            nodeRepulsion: 12000,
-            idealEdgeLength: count > 80 ? 140 : 115,
-            edgeElasticity: 0.35,
-            nestingFactor: 0.1,
-            gravity: 0.18,
-            numIter: count > 200 ? 1500 : 2500,
-            nodeSeparation: 70,
-            packComponents: true,
-            tile: true,
-          } as LayoutOptions),
-    );
+    .layout(graphLayoutOptions(props.layout, count));
   activeLayout.run();
   ensureSpacing();
   cy.fit(cy.elements(":visible"), 40);
@@ -127,33 +82,9 @@ function arrange() {
   emit("ready");
 }
 function ensureSpacing() {
-  const boxes = cy.nodes(":visible").map((node) => {
-    const b = node.boundingBox({
-      includeLabels: true,
-      includeOverlays: false,
-      includeUnderlays: false,
-    });
-    return {
-      id: node.id(),
-      x: (b.x1 + b.x2) / 2,
-      y: (b.y1 + b.y2) / 2,
-      width: b.w,
-      height: b.h,
-    };
-  });
-  const separated = separateBoxes(boxes);
-  cy.batch(() =>
-    separated.forEach((box, i) => {
-      const node = cy.getElementById(box.id),
-        position = node.position(),
-        prior = boxes[i]!;
-      node.position({
-        x: position.x + box.x - prior.x,
-        y: position.y + box.y - prior.y,
-      });
-    }),
-  );
+  ensureGraphSpacing(cy);
 }
+
 function sync() {
   if (!cy) return;
   const ids = JSON.stringify([
@@ -203,80 +134,11 @@ onMounted(() => {
     container: container.value,
     minZoom: 0.08,
     maxZoom: 3,
-    wheelSensitivity: 0.2,
+    // Cytoscape normalizes notched wheels to tiny deltas; keep each notch visible.
+    wheelSensitivity: 6,
     boxSelectionEnabled: false,
     autounselectify: true,
-    style: [
-      {
-        selector: "node",
-        style: {
-          width: 76,
-          height: 76,
-          "background-color": "#ffffff",
-          "border-color": "data(color)",
-          "border-width": 2,
-          label: "data(label)",
-          color: "#33443d",
-          "font-family": "Microsoft YaHei, sans-serif",
-          "font-size": 15,
-          "text-valign": "center",
-          "text-halign": "center",
-          "text-wrap": "wrap",
-          "text-max-width": "66px",
-          "overlay-opacity": 0,
-          "transition-property": "opacity",
-          "transition-duration": 160,
-        },
-      },
-      {
-        selector: "edge",
-        style: {
-          width: 1.3,
-          "line-color": "#b6c4bc",
-          "target-arrow-color": "#93a79b",
-          "source-arrow-color": "#93a79b",
-          "target-arrow-shape": "triangle",
-          "curve-style": "bezier",
-          "control-point-step-size": 42,
-          "arrow-scale": 0.8,
-          label: "data(label)",
-          "font-family": "Microsoft YaHei, sans-serif",
-          "font-size": 12,
-          color: "#69766d",
-          "text-background-color": "#fafbf8",
-          "text-background-opacity": 1,
-          "text-background-padding": "4px",
-          "text-rotation": "autorotate",
-          "text-margin-y": -1,
-          "overlay-opacity": 0,
-        },
-      },
-      { selector: "edge.two-way", style: { "source-arrow-shape": "triangle" } },
-      {
-        selector: "node.chosen",
-        style: {
-          "border-width": 3,
-          "background-color": "#e5efea",
-          "underlay-color": "#5b8b73",
-          "underlay-opacity": 0.12,
-          "underlay-padding": 10,
-          "underlay-shape": "ellipse",
-        },
-      },
-      {
-        selector: "edge.chosen",
-        style: {
-          width: 2.5,
-          "line-color": "#54846f",
-          "target-arrow-color": "#54846f",
-          "source-arrow-color": "#54846f",
-          color: "#315e48",
-        },
-      },
-      { selector: ".dimmed", style: { opacity: 0.15 } },
-      { selector: ".hidden", style: { display: "none" } },
-      { selector: "edge.no-label", style: { label: "" } },
-    ],
+    style: graphStyles,
   });
   cy.on("tap", "node", (e) =>
     emit("select", "character", e.target.data("rawId")),
@@ -301,34 +163,9 @@ onMounted(() => {
   applyTheme();
 });
 function applyTheme() {
-  if (!cy || !container.value) return;
-  const css = getComputedStyle(container.value),
-    get = (key: string) => css.getPropertyValue(key).trim();
-  cy.style()
-    .selector("node")
-    .style({ "background-color": get("--node-bg"), color: get("--text") })
-    .selector("edge")
-    .style({
-      "line-color": get("--edge"),
-      "target-arrow-color": get("--edge"),
-      "source-arrow-color": get("--edge"),
-      color: get("--muted"),
-      "text-background-color": get("--paper"),
-    })
-    .selector("node.chosen")
-    .style({
-      "background-color": get("--soft"),
-      "underlay-color": get("--green"),
-    })
-    .selector("edge.chosen")
-    .style({
-      "line-color": get("--green"),
-      color: get("--green"),
-      "target-arrow-color": get("--green"),
-      "source-arrow-color": get("--green"),
-    })
-    .update();
+  if (cy && container.value) applyGraphTheme(cy, container.value);
 }
+
 watch(
   () => props.theme,
   async () => {
@@ -367,85 +204,10 @@ function zoomBy(factor: number) {
 function fit() {
   cy?.fit(cy.elements(":visible"), 65);
 }
-async function exportImage(): Promise<Blob> {
-  if (!cy || !props.data.characters.length)
-    throw new Error("请先添加角色，再导出关系网图片。");
-  const host = document.createElement("div");
-  host.style.cssText =
-    "position:fixed;left:-20000px;top:0;width:1600px;height:1200px;";
-  document.body.append(host);
-  let exported: Core | undefined;
-  try {
-    const css = getComputedStyle(container.value!),
-      background = css.getPropertyValue("--paper").trim();
-    const elements: cytoscape.ElementDefinition[] = cy
-      .elements()
-      .map((item) => ({
-        data: item.data(),
-        position: item.isNode() ? item.position() : undefined,
-        group: item.group(),
-        classes: item.hasClass("two-way") ? "two-way" : "",
-      }));
-    exported = cytoscape({
-      container: host,
-      elements,
-      style: cy.json().style,
-      layout: { name: "preset" },
-      pixelRatio: 1,
-    });
-    exported.elements().removeClass("hidden dimmed chosen no-label");
-    exported
-      .layout({
-        name: "fcose",
-        animate: false,
-        randomize: true,
-        nodeDimensionsIncludeLabels: true,
-        idealEdgeLength: 125,
-        nodeRepulsion: 12000,
-        numIter: 1500,
-        tile: true,
-      } as LayoutOptions)
-      .run();
-    const boxes = exported.nodes().map((n) => {
-      const b = n.boundingBox({
-        includeLabels: true,
-        includeOverlays: false,
-        includeUnderlays: false,
-      });
-      return {
-        id: n.id(),
-        x: (b.x1 + b.x2) / 2,
-        y: (b.y1 + b.y2) / 2,
-        width: b.w,
-        height: b.h,
-      };
-    });
-    separateBoxes(boxes).forEach((box, i) => {
-      const n = exported!.getElementById(box.id),
-        p = n.position();
-      n.position({
-        x: p.x + box.x - boxes[i]!.x,
-        y: p.y + box.y - boxes[i]!.y,
-      });
-    });
-    await document.fonts.ready;
-    const bounds = exported.elements().boundingBox(),
-      scale = Math.min(
-        2,
-        8000 / Math.max(bounds.w, bounds.h),
-        Math.sqrt(32_000_000 / (bounds.w * bounds.h)),
-      );
-    return (await exported.png({
-      output: "blob-promise",
-      full: true,
-      bg: background,
-      scale,
-    })) as Blob;
-  } finally {
-    exported?.destroy();
-    host.remove();
-  }
+function exportImage() {
+  return exportGraphImage(cy, container.value!);
 }
+
 defineExpose({ arrange, focus, zoomBy, fit, exportImage });
 onBeforeUnmount(() => {
   clearTimeout(pinTimer);

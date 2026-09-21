@@ -4,6 +4,7 @@ import { createLibrary, parseLibrary, story, themes, type Library, type Theme } 
 import { addCharacter, clone, palette, parseAtlas, relationFrom, relationLabel, removeCharacter, splitTags, uid, type Atlas, type Character, type Relation } from './model'
 import { createSample } from './sample'
 import { loadWorkspace, saveWorkspace, storageDescription } from './storage'
+import { parseColorHistory } from './colors'
 
 export function useWorkspace() {
   const library=ref<Library>(createLibrary(createSample())),data=ref<Atlas>(clone(library.value.graphs[0]!.data))
@@ -11,9 +12,9 @@ export function useWorkspace() {
   const query=ref(''),group=ref(''),selectedId=ref(''),selectedKind=ref<'character'|'relation'|'none'>('none')
   const labels=ref(true),neighborhood=ref(false),layout=ref('fcose'),inspector=ref(false),zoom=ref(100)
   const graph=ref<InstanceType<typeof RelationshipGraph>>(),modal=ref(''),formError=ref(''),toast=ref(''),toastError=ref(false),jsonInput=ref<HTMLInputElement>()
-  const draftCharacter=ref({id:'',name:'',group:'',color:palette[0]!,notes:'',tags:'',initialTo:'',initialLabel:'朋友',initialDirection:'two-way' as 'one-way'|'two-way',initialMode:'shared' as 'shared'|'paired',initialReverse:''})
-  const draftRelation=ref({id:'',from:'',to:'',label:'',direction:'one-way' as 'one-way'|'two-way',mode:'shared' as 'shared'|'paired',reverseLabel:'',description:''})
-  const draftProject=ref({title:'',description:''}),creatingProject=ref(false),bookQuery=ref('')
+  const draftCharacter=ref({id:'',name:'',group:'',color:palette[0]!,notes:'',tags:'',initialTo:'',initialLabel:'朋友',initialDirection:'two-way' as 'one-way'|'two-way'})
+  const draftRelation=ref({id:'',from:'',to:'',label:'',direction:'one-way' as 'one-way'|'two-way',description:''})
+  const draftProject=ref({title:''}),creatingProject=ref(false),bookQuery=ref('')
   const isEditing=ref(false),pendingImport=ref<{data:Atlas;warnings:string[];library?:Library}|null>(null)
   const undoStack=ref<Atlas[]>([]),redoStack=ref<Atlas[]>([])
   const confirmation=ref<{title:string;description:string;action:()=>void;destructive:boolean}|null>(null)
@@ -21,7 +22,7 @@ export function useWorkspace() {
   const theme=computed(()=>library.value.theme)
   const groups=computed(()=>[...new Set(data.value.characters.map(c=>c.group||'未分组'))])
   const characters=computed(()=>data.value.characters.filter(c=>(!group.value||(c.group||'未分组')===group.value)&&`${c.name} ${c.id} ${c.tags?.join(' ')}`.toLowerCase().includes(query.value.toLowerCase())))
-  const books=computed(()=>library.value.graphs.filter(s=>`${s.data.title} ${s.data.description}`.toLowerCase().includes(bookQuery.value.toLowerCase())))
+  const books=computed(()=>library.value.graphs.filter(s=>s.data.title.toLowerCase().includes(bookQuery.value.toLowerCase())))
   const character=computed(()=>selectedKind.value==='character'?data.value.characters.find(c=>c.id===selectedId.value):undefined)
   const relation=computed(()=>selectedKind.value==='relation'?data.value.relations.find(r=>r.id===selectedId.value):undefined)
   const linked=computed(()=>character.value?data.value.relations.filter(r=>r.from===character.value!.id||r.to===character.value!.id):[])
@@ -58,32 +59,32 @@ export function useWorkspace() {
   function cleanSelection(){if(selectedKind.value==='character'&&!character.value||selectedKind.value==='relation'&&!relation.value){selectedKind.value='none';selectedId.value=''}if(group.value&&!groups.value.includes(group.value))group.value='';if(floatingId.value&&!floatingCharacter.value)closeFloating()}
   function select(kind:'character'|'relation'|'none',id:string,focus=false){selectedKind.value=kind;selectedId.value=id;if(kind!=='none')inspector.value=true;if(focus)graph.value?.focus(id)}
   function openModal(kind:string){formError.value='';closeFloating();modal.value=kind}
-  function editCharacter(c?:Character){isEditing.value=!!c;draftCharacter.value={id:c?.id||uid('character'),name:c?.name||'',group:c?.group||group.value||'',color:c?.color||palette[groups.value.length%palette.length]!,notes:c?.notes||'',tags:c?.tags?.join(' ')||'',initialTo:'',initialLabel:'朋友',initialDirection:'two-way',initialMode:'shared',initialReverse:''};openModal('character')}
+  function editCharacter(c?:Character){isEditing.value=!!c;draftCharacter.value={id:c?.id||uid('character'),name:c?.name||'',group:c?.group||group.value||'',color:c?.color||palette[groups.value.length%palette.length]!,notes:c?.notes||'',tags:c?.tags?.join(' ')||'',initialTo:'',initialLabel:'朋友',initialDirection:'two-way'};openModal('character')}
   function submitCharacter(){try{
     const d=draftCharacter.value,existing=data.value.characters.find(c=>c.id===d.id)
     const c:Character={...existing,id:d.id,name:d.name.trim(),group:d.group.trim()||'未分组',color:d.color,notes:d.notes,tags:splitTags(d.tags)}
     if(!c.name)throw new Error('请填写角色名称。')
     let next=isEditing.value?{...data.value,characters:data.value.characters.map(old=>old.id===c.id?c:old)}:addCharacter(data.value,c)
-    if(!isEditing.value&&d.initialTo){if(!d.initialLabel.trim()||(d.initialDirection==='two-way'&&d.initialMode==='paired'&&!d.initialReverse.trim()))throw new Error('请填写完整的初始关系。');next={...next,relations:[...next.relations,{id:uid('relation'),from:c.id,to:d.initialTo,label:d.initialLabel.trim(),direction:d.initialDirection,mode:d.initialMode,reverseLabel:d.initialReverse.trim()}]}}
+    if(!isEditing.value&&d.initialTo){if(!d.initialLabel.trim())throw new Error('请填写完整的初始关系。');next={...next,relations:[...next.relations,{id:uid('relation'),from:c.id,to:d.initialTo,label:d.initialLabel.trim(),direction:d.initialDirection}]}}
     commit(parseAtlas(next).data);group.value='';select('character',c.id);modal.value='';notify(isEditing.value?'角色档案已更新':`已添加角色「${c.name}」`)
   }catch(e){formError.value=errorMessage(e)}}
-  function editRelation(r?:Relation){isEditing.value=!!r;draftRelation.value={id:r?.id||uid('relation'),from:r?.from||character.value?.id||data.value.characters[0]?.id||'',to:r?.to||data.value.characters.find(c=>c.id!==(character.value?.id||data.value.characters[0]?.id))?.id||data.value.characters[0]?.id||'',label:r?.label||'',direction:r?.direction||'one-way',mode:r?.mode||'shared',reverseLabel:r?.reverseLabel||'',description:r?.description||''};openModal('relation')}
-  function submitRelation(){try{const d=draftRelation.value;if(!d.from||!d.to||!d.label.trim())throw new Error('请选择两端角色并填写关系名称。');if(d.direction==='two-way'&&d.mode==='paired'&&!d.reverseLabel.trim())throw new Error('请填写 B 对 A 的关系。');const r={...data.value.relations.find(r=>r.id===d.id),...d,label:d.label.trim(),reverseLabel:d.reverseLabel.trim()};commit(parseAtlas({...data.value,relations:isEditing.value?data.value.relations.map(old=>old.id===r.id?r:old):[...data.value.relations,r]}).data);select('relation',r.id);modal.value='';notify('关系已保存')}catch(e){formError.value=errorMessage(e)}}
+  function editRelation(r?:Relation){isEditing.value=!!r;draftRelation.value={id:r?.id||uid('relation'),from:r?.from||character.value?.id||data.value.characters[0]?.id||'',to:r?.to||data.value.characters.find(c=>c.id!==(character.value?.id||data.value.characters[0]?.id))?.id||data.value.characters[0]?.id||'',label:r?relationLabel(r):'',direction:r?.direction||'one-way',description:r?.description||''};openModal('relation')}
+  function submitRelation(){try{const d=draftRelation.value;if(!d.from||!d.to||!d.label.trim())throw new Error('请选择两端角色并填写关系名称。');const r={...data.value.relations.find(r=>r.id===d.id),...d,label:d.label.trim()};commit(parseAtlas({...data.value,relations:isEditing.value?data.value.relations.map(old=>old.id===r.id?r:old):[...data.value.relations,r]}).data);select('relation',r.id);modal.value='';notify('关系已保存')}catch(e){formError.value=errorMessage(e)}}
   function askConfirmation(title:string,description:string,action:()=>void,destructive=false){confirmation.value={title,description,action,destructive};openModal('confirm')}
   function deleteCharacter(c:Character){askConfirmation(`删除「${c.name}」？`,`同时移除与该角色有关的 ${linked.value.length} 条关系。此操作可以撤销。`,()=>{commit(removeCharacter(data.value,c.id));select('none','');modal.value='';notify('角色已删除，可撤销恢复')},true)}
   function deleteRelation(r:Relation){askConfirmation('删除这条关系？',`${name(r.from)} ↔ ${name(r.to)} · ${relationLabel(r)}。此操作可以撤销。`,()=>{commit({...data.value,relations:data.value.relations.filter(old=>old.id!==r.id)});select('none','');modal.value=''},true)}
   function activate(id:string){syncCurrent();const entry=library.value.graphs.find(s=>s.id===id);if(!entry)return;library.value.activeId=id;data.value=clone(entry.data);query.value='';group.value='';undoStack.value=[];redoStack.value=[];closeFloating();select('none','');inspector.value=false;modal.value='';void persist().catch(()=>{})}
   function addStory(atlas:Atlas){if(library.value.graphs.length>=1000)throw new Error('书架最多保存 1,000 张关系网。');syncCurrent();const entry=story(atlas);library.value.graphs.push(entry);activate(entry.id)}
-  function newProject(){creatingProject.value=true;draftProject.value={title:'',description:''};openModal('project')}
-  function editProject(){creatingProject.value=false;draftProject.value={title:data.value.title,description:data.value.description};openModal('project')}
-  function submitProject(){try{if(!draftProject.value.title.trim())throw new Error('请填写关系网名称。');const values={title:draftProject.value.title.trim(),description:draftProject.value.description};if(creatingProject.value)addStory({version:1,...values,characters:[],relations:[]});else commit({...data.value,...values});modal.value='';notify(creatingProject.value?'新关系网已加入书架':'关系网信息已保存')}catch(e){formError.value=errorMessage(e)}}
-  function deleteStory(id:string){const entry=library.value.graphs.find(s=>s.id===id);if(!entry)return;askConfirmation(`删除关系网「${entry.data.title}」？`,'这将从本机书架移除整张关系网，建议先导出 JSON 备份。',()=>{library.value.graphs=library.value.graphs.filter(s=>s.id!==id);if(!library.value.graphs.length)library.value.graphs.push(story({version:1,title:'新的故事',description:'',characters:[],relations:[]}));if(library.value.activeId===id)activate(library.value.graphs[0]!.id);else{modal.value='library';void persist().catch(()=>{})}},true)}
+  function newProject(){creatingProject.value=true;draftProject.value={title:''};openModal('project')}
+  function editProject(){creatingProject.value=false;draftProject.value={title:data.value.title};openModal('project')}
+  function submitProject(){try{if(!draftProject.value.title.trim())throw new Error('请填写关系网名称。');const values={title:draftProject.value.title.trim()};if(creatingProject.value)addStory({version:1,...values,characters:[],relations:[]});else commit({...data.value,...values});modal.value='';notify(creatingProject.value?'新关系网已加入书架':'关系网信息已保存')}catch(e){formError.value=errorMessage(e)}}
+  function deleteStory(id:string){const entry=library.value.graphs.find(s=>s.id===id);if(!entry)return;askConfirmation(`删除关系网「${entry.data.title}」？`,'这将从本机书架移除整张关系网，建议先导出 JSON 备份。',()=>{library.value.graphs=library.value.graphs.filter(s=>s.id!==id);if(!library.value.graphs.length)library.value.graphs.push(story({version:1,title:'新的故事',characters:[],relations:[]}));if(library.value.activeId===id)activate(library.value.graphs[0]!.id);else{modal.value='library';void persist().catch(()=>{})}},true)}
   function changeTheme(value:Theme){library.value.theme=value;void persist().catch(()=>{})}
   watch(theme,value=>{document.documentElement.dataset.theme=value},{immediate:true})
   async function importJson(){if(!window.desktop){jsonInput.value?.click();return}try{const result=await window.desktop.importJson();if(result)previewImport(result.data)}catch(e){notify(`导入失败：${errorMessage(e)}`,true)}}
   function previewImport(input:unknown){if((input as {version?:number})?.version===2){const imported=parseLibrary(input);pendingImport.value={data:imported.graphs[0]!.data,warnings:[],library:imported}}else{const parsed=parseAtlas(input);pendingImport.value=parsed}openModal('import')}
   async function readJson(event:Event){const input=event.target as HTMLInputElement,file=input.files?.[0];input.value='';if(!file)return;try{if(file.size>128*1024*1024)throw new Error('文件不能超过 128 MB。');previewImport(JSON.parse((await file.text()).replace(/^\uFEFF/,'')))}catch(e){notify(`导入失败：${errorMessage(e)}`,true)}}
-  function confirmImport(){try{const pending=pendingImport.value;if(!pending)return;if(pending.library){if(library.value.graphs.length+pending.library.graphs.length>1000)throw new Error('导入后超过 1,000 张关系网。');syncCurrent();const entries=pending.library.graphs.map(s=>story(s.data));library.value.graphs.push(...entries);activate(entries[0]!.id)}else addStory(pending.data);pendingImport.value=null;modal.value='';notify('已作为新关系网加入书架，原有关系网保留')}catch(e){formError.value=errorMessage(e)}}
+  function confirmImport(){try{const pending=pendingImport.value;if(!pending)return;if(pending.library){if(library.value.graphs.length+pending.library.graphs.length>1000)throw new Error('导入后超过 1,000 张关系网。');syncCurrent();const entries=pending.library.graphs.map(s=>story(s.data));library.value.graphs.push(...entries);library.value.customColors=parseColorHistory([...(library.value.customColors||[]),...(pending.library.customColors||[])]);activate(entries[0]!.id)}else addStory(pending.data);pendingImport.value=null;modal.value='';notify('已作为新关系网加入书架，原有关系网保留')}catch(e){formError.value=errorMessage(e)}}
   function downloadBlob(blob:Blob,filename:string){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000)}
   async function exportJson(all=false){try{syncCurrent();const payload=all?clone(library.value):clone(data.value);if(window.desktop){if(await window.desktop.exportJson(payload))notify('JSON 已导出')}else{downloadBlob(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),`${all?'织灵-完整书架':data.value.title.replace(/[<>:"/\\|?*]/g,'_')}.json`);notify('JSON 已导出')}}catch(e){notify(`导出失败：${errorMessage(e)}`,true)}}
   const exporting=ref(false)

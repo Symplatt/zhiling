@@ -2,6 +2,17 @@ import { describe, it, expect } from 'vitest'
 import { parseAtlas, addCharacter, removeCharacter, splitTags, relationLabel, relationFrom } from '../src/model'
 import { createSample } from '../src/sample'
 describe('关系网数据完整性', () => {
+  it('移除旧版关系网简介，保留人物小传、关系描述及扩展信息', () => {
+    const input = createSample()
+    input.description = '旧版关系网简介'
+    input.custom = '扩展信息'
+    input.relations[0]!.description = '两人相识的故事'
+    const result = parseAtlas(input).data
+    expect(result).not.toHaveProperty('description')
+    expect(result.characters[0]!.notes).toBe(input.characters[0]!.notes)
+    expect(result.relations[0]!.description).toBe('两人相识的故事')
+    expect(result.custom).toBe('扩展信息')
+  })
   it('兼容需求文档的最小 JSON，并生成稳定关系 ID', () => {
     const input = { characters: [{ id: '001', name: '花盈' }, { id: '002', name: '花绫' }], relations: [{ from: '001', to: '002', label: '姐姐', direction: 'one-way' }] }
     const { data } = parseAtlas(input)
@@ -45,6 +56,17 @@ describe('关系网数据完整性', () => {
     expect(parseAtlas(data).data.characters[0]!.name).toBe('花盈')
   })
   it('空格分隔标签并去重',()=>{expect(splitTags('  侠客 仙子\t金丹后期 仙子 ')).toEqual(['侠客','仙子','金丹后期'])})
+  it('旧双向关系合并到一个输入字段，重复载入不会重复拼接', () => {
+    const data = parseAtlas({characters:[{id:'a',name:'甲'},{id:'b',name:'乙'}],relations:[
+      {id:'r',from:'a',to:'b',label:'母亲',reverseLabel:'女儿',mode:'paired',direction:'two-way',description:'原说明'},
+    ]}).data
+    expect(data.relations[0]).toMatchObject({label:'母亲/女儿',description:'原说明'})
+    expect(data.relations[0]).not.toHaveProperty('mode')
+    expect(data.relations[0]).not.toHaveProperty('reverseLabel')
+    expect(parseAtlas(data).data).toEqual(data)
+    data.relations[0]!.label = '母女'
+    expect(parseAtlas(data).data.relations[0]!.label).toBe('母女')
+  })
   it('成对的双向关系按人物视角反转，共同关系不反转',()=>{
     const r={id:'r',from:'a',to:'b',label:'母亲',reverseLabel:'女儿',direction:'two-way' as const,mode:'paired' as const}
     expect(relationLabel(r)).toBe('母亲/女儿')

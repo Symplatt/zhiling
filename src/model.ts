@@ -9,7 +9,7 @@ export interface Relation {
   [key: string]: unknown
 }
 export interface Atlas {
-  version: 1; title: string; description: string; characters: Character[]; relations: Relation[]
+  version: 1; title: string; characters: Character[]; relations: Relation[]
   [key: string]: unknown
 }
 export function uid(prefix: string) { return `${prefix}-${crypto.randomUUID()}` }
@@ -45,9 +45,15 @@ export function parseAtlas(input: unknown): { data: Atlas; warnings: string[] } 
     if (raw.direction !== undefined && raw.direction !== 'one-way' && raw.direction !== 'two-way') throw new Error(`第 ${i + 1} 条关系的 direction 需要为 one-way 或 two-way。`)
     const mode = raw.mode === 'paired' ? 'paired' : 'shared'
     if (raw.direction === 'two-way' && mode === 'paired' && !str(raw.reverseLabel).trim()) throw new Error(`第 ${i + 1} 条关系缺少 B 对 A 的关系。`)
-    return { ...raw, id, from, to, label: str(raw.label, '关联'), direction: raw.direction === 'two-way' ? 'two-way' : 'one-way', mode, reverseLabel: str(raw.reverseLabel), description: str(raw.description) }
+    // Migrate legacy paired labels once, retaining both names in the single field.
+    const label = raw.direction === 'two-way' && mode === 'paired'
+      ? str(raw.label, '关联') + '/' + str(raw.reverseLabel)
+      : str(raw.label, '关联')
+    const { mode: _legacyMode, reverseLabel: _legacyReverse, ...fields } = raw
+    return { ...fields, id, from, to, label, direction: raw.direction === 'two-way' ? 'two-way' : 'one-way', description: str(raw.description) }
   })
-  return { data: { ...input, version: 1, title: str(input.title, '未命名故事'), description: str(input.description), characters, relations }, warnings }
+  const { description: _legacyDescription, ...fields } = input
+  return { data: { ...fields, version: 1, title: str(input.title, '未命名故事'), characters, relations }, warnings }
 }
 export function removeCharacter(data: Atlas, id: string): Atlas {
   return { ...data, characters: data.characters.filter(c => c.id !== id), relations: data.relations.filter(r => r.from !== id && r.to !== id) }

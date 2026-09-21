@@ -497,16 +497,6 @@ button img {
   min-width: 0;
   background: var(--paper);
 }
-.graph-header {
-  height: 147px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 20px 32px;
-  border-bottom: 1px solid var(--line);
-  gap: 20px;
-}
 .breadcrumb {
   display: flex;
   align-items: center;
@@ -517,26 +507,6 @@ button img {
 }
 .breadcrumb span {
   color: #748271;
-}
-.graph-header h1 {
-  font-size: 24px;
-  letter-spacing: 1px;
-  font-weight: 500;
-  color: #384e3c;
-}
-.graph-header h1 span {
-  color: #8c9b81;
-  font-weight: 400;
-}
-.graph-header p {
-  font-size: 11px;
-  color: #9aa390;
-  margin-top: 11px;
-  letter-spacing: 0.5px;
-  max-width: 720px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 .primary-button,
 .secondary-button,
@@ -572,16 +542,6 @@ button img {
 }
 .danger-button:hover {
   background: #934444;
-}
-.graph-toolbar {
-  height: 53px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  padding: 0 23px;
-  border-bottom: 1px solid var(--line);
-  background: #fdfdfa;
 }
 .view-label {
   display: flex;
@@ -1471,13 +1431,6 @@ button img {
   .inspector {
     width: 300px;
   }
-  .graph-header {
-    height: 158px;
-    padding-left: 40px;
-  }
-  .graph-header h1 {
-    font-size: 27px;
-  }
   .character-item {
     min-height: 61px;
   }
@@ -1493,13 +1446,6 @@ button img {
   .inspector {
     width: 245px;
   }
-  .graph-header {
-    padding: 22px;
-    height: 134px;
-  }
-  .graph-header h1 {
-    font-size: 21px;
-  }
   .header-center {
     display: none;
   }
@@ -1508,10 +1454,6 @@ button img {
   }
   .brand {
     min-width: 225px;
-  }
-  .graph-toolbar {
-    padding: 0 15px;
-    gap: 5px;
   }
   .toolbar-button {
     padding: 7px;
@@ -1555,17 +1497,8 @@ button img {
   }
 }
 @media (max-height: 800px) {
-  .graph-header {
-    height: 124px;
-  }
-  .graph-header h1 {
-    font-size: 22px;
-  }
   .breadcrumb {
     margin-bottom: 10px;
-  }
-  .graph-header p {
-    margin-top: 8px;
   }
   .character-item {
     min-height: 51px;
@@ -1630,23 +1563,11 @@ button img {
     width: 250px;
     z-index: 5;
   }
-  .graph-header p {
-    max-width: 420px;
-  }
-  .graph-header h1 {
-    font-size: 20px;
-  }
   .view-label {
-    display: none;
-  }
-  .graph-toolbar > .vertical-divider {
     display: none;
   }
   .status-bar > span:nth-child(4) {
     display: none;
-  }
-  .graph-header {
-    padding: 20px;
   }
   .character-item {
     padding-left: 6px;

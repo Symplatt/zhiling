@@ -1,7 +1,7 @@
 import type { Atlas } from './model'
 export function createSample(): Atlas {
   return {
-    version: 1, title: '云川旧事', description: '一场江湖旧梦，十二个人的命运交织。',
+    version: 1, title: '云川旧事',
     characters: [
       { id: 'huaying', name: '花盈', group: '花家', color: '#4f8072', notes: '花家长女，温柔而坚韧。\n\n曾在云川渡口救下梓夜，自此卷入一段被尘封的江湖往事。她想守护的，从来不是家族的名望，而是身边每一个人。', tags: ['主角', '医者'] },
       { id: 'hualing', name: '花绫', group: '花家', color: '#4f8072', notes: '花盈的妹妹，聪慧灵动，擅长机关术。', tags: ['机关师'] },

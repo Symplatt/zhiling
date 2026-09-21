@@ -18,18 +18,14 @@ const {
     <div class="form-grid">
       <label
         >角色名称 <span>*</span
-        ><input
-          v-model="draftCharacter.name"
-          required
-          maxlength="60"
-          placeholder="这个角色叫什么？"
+        ><input v-model="draftCharacter.name" required maxlength="60"
       /></label>
     </div>
     <CharacterGroupField />
     <label
       >角色标签<input
         v-model="draftCharacter.tags"
-        placeholder="侠客 仙子 金丹后期（用空格分隔标签）"
+        placeholder="用空格分隔多个标签"
         maxlength="200"
     /></label>
     <CharacterColorField />

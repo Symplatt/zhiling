@@ -1,5 +1,6 @@
 import { type Atlas, parseAtlas, uid } from './model'
 import { parseColorHistory } from './colors'
+import { parseLayoutDensity, type LayoutDensity } from './layoutDensity'
 export type Theme = 'mono' | 'grass' | 'pink' | 'blue' | 'gold'
 export const themes: { id: Theme; name: string; description: string; color: string; background: string }[] = [
   { id: 'mono', name: '黑白灰', description: '留白与秩序', color: '#555b64', background: '#e4e5e7' },
@@ -9,7 +10,7 @@ export const themes: { id: Theme; name: string; description: string; color: stri
   { id: 'pink', name: '桃粉', description: '淡淡的玫瑰', color: '#92717c', background: '#e7e1e3' }
 ]
 export interface Story { id: string; updatedAt: string; data: Atlas }
-export interface Library { version: 2; activeId: string; theme: Theme; graphs: Story[]; customColors?: string[] }
+export interface Library { version: 2; activeId: string; theme: Theme; graphs: Story[]; customColors?: string[]; layoutDensity?: LayoutDensity }
 export function story(data: Atlas): Story { return { id: uid('story'), updatedAt: new Date().toISOString(), data } }
 export function createLibrary(data: Atlas): Library { const entry = story(data); return { version: 2, activeId: entry.id, theme: 'grass', graphs: [entry] } }
 export function parseLibrary(input: unknown): Library {
@@ -23,5 +24,5 @@ export function parseLibrary(input: unknown): Library {
     ids.add(item.id)
     return { id: item.id, updatedAt: typeof item.updatedAt === 'string' ? item.updatedAt : new Date().toISOString(), data: parseAtlas(item.data).data }
   })
-  return { version: 2, activeId: ids.has(String(raw.activeId)) ? String(raw.activeId) : graphs[0]!.id, theme: themes.some(t => t.id === raw.theme) ? raw.theme as Theme : 'grass', graphs, customColors: parseColorHistory(raw.customColors) }
+  return { version: 2, activeId: ids.has(String(raw.activeId)) ? String(raw.activeId) : graphs[0]!.id, theme: themes.some(t => t.id === raw.theme) ? raw.theme as Theme : 'grass', graphs, customColors: parseColorHistory(raw.customColors), layoutDensity: parseLayoutDensity(raw.layoutDensity) }
 }

@@ -12,6 +12,14 @@ app.on('browser-window-created',(_,win)=>{win.hide();win.webContents.once('did-f
     const loaded=await win.webContents.executeJavaScript('window.desktop.load()');assert.equal(loaded.data.graphs.length,1)
     assert.equal(loaded.data.graphs[0].data.relations[0].label,'母亲/女儿')
     assert.equal(loaded.data.graphs[0].data.relations[0].mode,undefined)
+    assert.equal(loaded.data.layoutDensity,1)
+    const baselineDistance=await win.webContents.executeJavaScript(`(() => {const cy=document.querySelector('.graph-engine')._cyreg.cy,a=cy.$id('c:a').position(),b=cy.$id('c:b').position();return Math.hypot(b.x-a.x,b.y-a.y)})()`)
+    await win.webContents.executeJavaScript(`document.querySelector('[aria-label="图谱设置"]').click()`)
+    await win.webContents.executeJavaScript(`document.querySelector('[aria-label="排列稀疏程度 5 档"]').click()`)
+    const expandedDistance=await win.webContents.executeJavaScript(`(() => {const cy=document.querySelector('.graph-engine')._cyreg.cy,a=cy.$id('c:a').position(),b=cy.$id('c:b').position();return Math.hypot(b.x-a.x,b.y-a.y)})()`)
+    assert(Math.abs(expandedDistance/baselineDistance-1.8)<1e-6)
+    await win.webContents.executeJavaScript(`new Promise((resolve,reject)=>{let n=0;const id=setInterval(async()=>{if((await window.desktop.load()).data.layoutDensity===5){clearInterval(id);resolve()}else if(++n>100){clearInterval(id);reject(new Error('Density save timed out'))}},50)})`)
+    await win.webContents.executeJavaScript(`document.querySelector('[aria-label="关闭对话框"]').click()`)
     const beforeExport=await win.webContents.executeJavaScript(`(() => {
       const cy=document.querySelector('.graph-engine')._cyreg.cy;
       cy.stop(true,false);cy.$id('c:a').position({x:0,y:0});cy.$id('c:b').position({x:480,y:200});

@@ -56,6 +56,5 @@ function add() {
         <Plus :size="14" />添加阵营
       </button>
     </div>
-    <p class="form-note">一个角色可以属于多个阵营；未选择时归入“未分组”。</p>
   </div>
 </template>

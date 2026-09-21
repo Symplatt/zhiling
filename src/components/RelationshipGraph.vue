@@ -2,7 +2,8 @@
 import cytoscape, { type Core } from "cytoscape";
 import fcose from "cytoscape-fcose";
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { graphLayoutOptions, ensureGraphSpacing } from "../graph/layout";
+import { graphLayoutOptions, ensureGraphSpacing, scaleGraphSpacing } from "../graph/layout";
+import { densityScale } from "../layoutDensity";
 import { graphStyles, applyGraphTheme } from "../graph/styles";
 import { applyGraphVisibility } from "../graph/selection";
 import { exportGraphImage } from "../graph/exportImage";
@@ -21,6 +22,7 @@ const props = defineProps<{
   labels: boolean;
   neighborhood: boolean;
   layout: string;
+  density: number;
   theme: string;
 }>();
 const emit = defineEmits<{
@@ -83,13 +85,17 @@ function arrange() {
   activeLayout.run();
   ensureSpacing();
   improveStraightLayout(cy);
+  scaleGraphSpacing(cy, densityScale(props.density));
+  fitArrangement();
+  emit("ready");
+}
+function fitArrangement() {
   cy.fit(cy.elements(":visible"), 40);
   if (cy.zoom() > 1.25)
     cy.zoom({
       level: 1.25,
       renderedPosition: { x: cy.width() / 2, y: cy.height() / 2 },
     });
-  emit("ready");
 }
 function ensureSpacing() {
   ensureGraphSpacing(cy);
@@ -207,6 +213,13 @@ watch(
     arrange();
   },
 );
+watch(() => props.density, (value, previous) => {
+  if (!cy) return;
+  cy.stop(true, false);
+  cy.nodes().stop(true, false);
+  scaleGraphSpacing(cy, densityScale(value) / densityScale(previous));
+  fitArrangement();
+});
 function focus(id: string) {
   const node = cy?.getElementById(`c:${id}`);
   if (node?.length)

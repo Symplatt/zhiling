@@ -6,6 +6,7 @@ import { createSample } from './sample'
 import { loadWorkspace, saveWorkspace, storageDescription } from './storage'
 import { parseColorHistory } from './colors'
 import { characterGroups, belongsToGroup, sortCharacters, initialRelation, type InitialDirection } from './characters'
+import { parseLayoutDensity } from './layoutDensity'
 
 export function useWorkspace() {
   const library=ref<Library>(createLibrary(createSample())),data=ref<Atlas>(clone(library.value.graphs[0]!.data))
@@ -21,6 +22,7 @@ export function useWorkspace() {
   const confirmation=ref<{title:string;description:string;action:()=>void;destructive:boolean}|null>(null)
   let toastTimer:ReturnType<typeof setTimeout>,saveNumber=0,pendingSaves=0
   const theme=computed(()=>library.value.theme)
+  const layoutDensity=computed({get:()=>parseLayoutDensity(library.value.layoutDensity),set:(value:number)=>{library.value.layoutDensity=parseLayoutDensity(value);void persist().catch(()=>{})}})
   const groups=computed(()=>[...new Set(data.value.characters.flatMap(c=>characterGroups(c).length?characterGroups(c):['未分组']))])
   const sortedCharacters=computed(()=>sortCharacters(data.value.characters))
   const characters=computed(()=>data.value.characters.filter(c=>belongsToGroup(c,group.value)&&`${c.name} ${c.id} ${characterGroups(c).join(' ')} ${c.tags?.join(' ')}`.toLowerCase().includes(query.value.toLowerCase())))
@@ -114,5 +116,5 @@ export function useWorkspace() {
     }catch(e){ready.value=true;recoveryBlocked.value=true;saveStatus.value='需要恢复数据';notify(`本地书架未覆盖：${errorMessage(e)}`,true)}
   })
   onBeforeUnmount(()=>{document.removeEventListener('keydown',keydown);window.removeEventListener('beforeunload',beforeUnload);clearTimeout(toastTimer);clearTimeout(hideTimer)})
-  return {sortedCharacters,characterGroups,library,data,ready,recoveryBlocked,saveStatus,storageLabel,query,group,selectedId,selectedKind,labels,neighborhood,layout,inspector,zoom,graph,modal,formError,toast,toastError,jsonInput,draftCharacter,draftRelation,draftProject,creatingProject,bookQuery,books,isEditing,pendingImport,undoStack,redoStack,confirmation,theme,themes,groups,characters,character,relation,linked,selection,connectedPeople,name,relationLabel,relationFrom,hoverId,floatingId,pinnedId,floatQuery,floatingCharacter,floatingRows,enterCharacter,leaveCharacter,holdFloating,releaseFloating,pinCharacter,closeFloating,persist,undo,redo,select,openModal,editCharacter,submitCharacter,editRelation,submitRelation,deleteCharacter,deleteRelation,activate,newProject,editProject,submitProject,deleteStory,changeTheme,importJson,readJson,confirmImport,exportJson,exportImage,exporting,trapFocus,palette}
+  return {layoutDensity,sortedCharacters,characterGroups,library,data,ready,recoveryBlocked,saveStatus,storageLabel,query,group,selectedId,selectedKind,labels,neighborhood,layout,inspector,zoom,graph,modal,formError,toast,toastError,jsonInput,draftCharacter,draftRelation,draftProject,creatingProject,bookQuery,books,isEditing,pendingImport,undoStack,redoStack,confirmation,theme,themes,groups,characters,character,relation,linked,selection,connectedPeople,name,relationLabel,relationFrom,hoverId,floatingId,pinnedId,floatQuery,floatingCharacter,floatingRows,enterCharacter,leaveCharacter,holdFloating,releaseFloating,pinCharacter,closeFloating,persist,undo,redo,select,openModal,editCharacter,submitCharacter,editRelation,submitRelation,deleteCharacter,deleteRelation,activate,newProject,editProject,submitProject,deleteStory,changeTheme,importJson,readJson,confirmImport,exportJson,exportImage,exporting,trapFocus,palette}
 }

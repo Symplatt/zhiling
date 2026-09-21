@@ -18,6 +18,7 @@ const {
   labels,
   neighborhood,
   layout,
+  layoutDensity,
   zoom,
   graph,
   undoStack,
@@ -57,6 +58,7 @@ const {
       @hover="enterCharacter"
       @leave="leaveCharacter"
       :layout="layout"
+      :density="layoutDensity"
       @select="select"
       @zoom="zoom = $event"
     />

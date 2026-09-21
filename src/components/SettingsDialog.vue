@@ -1,8 +1,17 @@
 <script setup lang="ts">
 import { Check, Network } from "lucide-vue-next";
+import { densityLevels } from "../layoutDensity";
 import { useWorkspaceContext } from "../workspaceContext";
-const { labels, neighborhood, layout, modal, theme, themes, changeTheme } =
-  useWorkspaceContext();
+const {
+  labels,
+  neighborhood,
+  layout,
+  layoutDensity,
+  modal,
+  theme,
+  themes,
+  changeTheme,
+} = useWorkspaceContext();
 </script>
 <template>
   <div>
@@ -66,8 +75,79 @@ const { labels, neighborhood, layout, modal, theme, themes, changeTheme } =
     <p class="dialog-copy">
       自动布局会为角色留出间距。密集关系仍可能交叉，可放大查看或按阵营筛选。
     </p>
+    <fieldset class="density-setting">
+      <legend>排列稀疏程度</legend>
+      <div class="density-levels">
+        <label
+          v-for="level in densityLevels"
+          :key="level"
+          :class="{ selected: layoutDensity === level }"
+        >
+          <input
+            v-model="layoutDensity"
+            type="radio"
+            name="layout-density"
+            :value="level"
+            :aria-label="`排列稀疏程度 ${level} 档`"
+          />
+          <strong>{{ level }} 档</strong>
+        </label>
+      </div>
+    </fieldset>
     <div class="modal-actions">
       <button class="primary-button" @click="modal = ''">完成</button>
     </div>
   </div>
 </template>
+<style scoped>
+.density-setting {
+  border: 0;
+  padding: 0;
+  margin: 20px 0 0;
+  min-width: 0;
+}
+.density-setting legend {
+  font-size: 13px;
+  color: var(--text);
+  margin-bottom: 10px;
+}
+.density-levels {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+.density-levels label {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 10px 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+  background: var(--paper);
+  color: var(--muted);
+}
+.density-levels label.selected {
+  color: var(--green);
+  border-color: var(--green);
+  background: var(--soft);
+}
+.density-levels label:focus-within {
+  outline: 2px solid var(--green);
+  outline-offset: 3px;
+}
+.density-levels input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+.density-levels strong {
+  font-size: 13px;
+}
+.density-levels small {
+  font-size: 11px;
+}
+</style>

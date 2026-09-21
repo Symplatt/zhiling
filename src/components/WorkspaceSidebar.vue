@@ -17,6 +17,7 @@ const {
   graph,
   groups,
   characters,
+  characterGroups,
   character,
   select,
   openModal,
@@ -34,16 +35,23 @@ const {
         title="切换关系网"
         @click="openModal('library')"
       >
-        <span>{{ data.title }}</span
-        ><ChevronDown :size="15" />
+        <span>{{ data.title }}</span>
       </button>
       <button
-        class="icon-button"
+        class="icon-button project-rename"
         title="重命名关系网"
         aria-label="重命名关系网"
         @click="editProject"
       >
         <Pencil :size="15" />
+      </button>
+      <button
+        class="project-switch icon-button"
+        title="切换关系网"
+        aria-label="切换关系网"
+        @click="openModal('library')"
+      >
+        <ChevronDown :size="15" />
       </button>
     </div>
     <div class="sidebar-graph-actions" aria-label="关系网工具">
@@ -115,7 +123,9 @@ const {
           </span>
           <span class="character-list-info">
             <strong>{{ c.name }}</strong>
-            <small>{{ c.group || "未分组" }}</small>
+            <small :title="characterGroups(c).join(' · ')">{{
+              characterGroups(c).join(" · ") || "未分组"
+            }}</small>
           </span>
         </button>
         <div v-if="!characters.length" class="list-empty">

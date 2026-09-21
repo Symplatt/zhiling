@@ -1,6 +1,6 @@
 {
   "name": "novel-atlas",
-  "version": "2.0.5",
+  "version": "2.0.6",
   "private": true,
   "description": "织灵 · 小说角色关系网",
   "author": "Novel Atlas",
@@ -12,8 +12,8 @@
     "desktop": "npm run build && electron .",
     "test": "vitest run",
     "start": "node server/start.cjs",
-    "pack": "node node_modules/electron/install.js && npm run build && electron-builder --win portable --x64",
-    "pack:release": "node node_modules/electron/install.js && npm run build && electron-builder --win nsis portable --x64"
+    "pack": "node node_modules/electron/install.js && npm run build && electron-builder --win portable --x64 --publish never",
+    "pack:release": "node node_modules/electron/install.js && npm run build && electron-builder --win nsis portable --x64 --publish never"
   },
   "dependencies": {
     "cytoscape": "^3.33.1",

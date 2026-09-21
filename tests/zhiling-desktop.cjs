@@ -12,10 +12,19 @@ app.on('browser-window-created',(_,win)=>{win.hide();win.webContents.once('did-f
     const loaded=await win.webContents.executeJavaScript('window.desktop.load()');assert.equal(loaded.data.graphs.length,1)
     assert.equal(loaded.data.graphs[0].data.relations[0].label,'母亲/女儿')
     assert.equal(loaded.data.graphs[0].data.relations[0].mode,undefined)
+    const beforeExport=await win.webContents.executeJavaScript(`(() => {
+      const cy=document.querySelector('.graph-engine')._cyreg.cy;
+      cy.stop(true,false);cy.$id('c:a').position({x:0,y:0});cy.$id('c:b').position({x:480,y:200});
+      cy.$id('c:b').emit('dragfree');cy.fit();
+      return JSON.stringify({nodes:cy.nodes().map(n=>({...n.position()})),pan:cy.pan(),zoom:cy.zoom()});
+    })()`)
     dialog.showSaveDialog=async()=>({canceled:false,filePath:path.join(root,'whole-graph.png')})
     await win.webContents.executeJavaScript(`Array.from(document.querySelectorAll('button')).find(b=>b.textContent.trim().startsWith('导出图片')).click()`)
     const deadline=Date.now()+10000;while(!fs.existsSync(path.join(root,'whole-graph.png'))){if(Date.now()>deadline)throw new Error('PNG export timed out');await new Promise(r=>setTimeout(r,50))}
     const png=fs.readFileSync(path.join(root,'whole-graph.png'));assert.equal(png.subarray(0,8).toString('hex'),'89504e470d0a1a0a')
+    const afterExport=await win.webContents.executeJavaScript(`(() => { const cy=document.querySelector('.graph-engine')._cyreg.cy; return JSON.stringify({nodes:cy.nodes().map(n=>({...n.position()})),pan:cy.pan(),zoom:cy.zoom()}); })()`)
+    assert.equal(afterExport,beforeExport,'PNG export must preserve the live viewport and manually placed nodes')
+    assert(png.readUInt32BE(16)>png.readUInt32BE(20),'PNG must retain the manually arranged wide layout')
     const all={...library,graphs:Array.from({length:120},(_,i)=>({...library.graphs[0],id:'s'+i,data:{...library.graphs[0].data,title:'测试'+i}})),activeId:'s119'}
     await win.webContents.executeJavaScript(`window.desktop.save(${JSON.stringify(all)})`)
     const restored=await win.webContents.executeJavaScript('window.desktop.load()');assert.equal(restored.data.graphs.length,120)

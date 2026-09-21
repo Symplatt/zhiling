@@ -6,8 +6,13 @@ import { graphLayoutOptions, ensureGraphSpacing } from "../graph/layout";
 import { graphStyles, applyGraphTheme } from "../graph/styles";
 import { applyGraphVisibility } from "../graph/selection";
 import { exportGraphImage } from "../graph/exportImage";
+import {
+  improveStraightLayout,
+  separateRelationshipLabels,
+} from "../graph/straightLayout";
 import type { Atlas } from "../model";
 import { relationLabel } from "../model";
+import { characterGroups } from "../characters";
 cytoscape.use(fcose);
 const props = defineProps<{
   data: Atlas;
@@ -67,12 +72,17 @@ function applyVisibility() {
 function arrange() {
   if (!cy || !cy.nodes(":visible").length) return;
   activeLayout?.stop();
+  // A sidebar click may still be animating focus when the faction changes.
+  cy.stop(true, false);
+  cy.nodes().stop(true, false);
+  cy.resize();
   const count = cy.nodes(":visible").length;
   activeLayout = cy
     .elements(":visible")
     .layout(graphLayoutOptions(props.layout, count));
   activeLayout.run();
   ensureSpacing();
+  improveStraightLayout(cy);
   cy.fit(cy.elements(":visible"), 40);
   if (cy.zoom() > 1.25)
     cy.zoom({
@@ -92,7 +102,7 @@ function sync() {
     props.data.relations.map((r) => [r.id, r.from, r.to]),
   ]);
   const positions = new Map(
-    cy.nodes().map((n) => [n.id(), n.position()] as const),
+    cy.nodes().map((n) => [n.id(), { ...n.position() }] as const),
   );
   cy.batch(() => {
     cy.elements().remove();
@@ -103,7 +113,7 @@ function sync() {
           id: `c:${c.id}`,
           label: c.name,
           color: c.color || "#4f8072",
-          group: c.group,
+          groups: characterGroups(c),
           rawId: c.id,
         },
         position: positions.get(`c:${c.id}`),
@@ -116,18 +126,26 @@ function sync() {
           id: `r:${r.id}`,
           source: `c:${r.from}`,
           target: `c:${r.to}`,
-          label: relationLabel(r),
+          label:
+            r.from === r.to ? `${relationLabel(r)}（自身）` : relationLabel(r),
+          labelOffset: 0,
           rawId: r.id,
         },
-        classes: r.direction === "two-way" ? "two-way" : "",
+        classes: [
+          r.direction === "two-way" ? "two-way" : "",
+          r.from === r.to ? "self-relation" : "",
+        ].join(" "),
       })),
     );
   });
   applyVisibility();
+  separateRelationshipLabels(cy);
   if (priorIds !== ids) {
     priorIds = ids;
     arrange();
-  } else ensureSpacing();
+  } else {
+    ensureSpacing();
+  }
 }
 onMounted(() => {
   cy = cytoscape({
@@ -150,7 +168,9 @@ onMounted(() => {
     if (e.target === cy) emit("select", "none", "");
   });
   cy.on("zoom", () => emit("zoom", Math.round(cy.zoom() * 100)));
-  cy.on("dragfree", "node", ensureSpacing);
+  cy.on("dragfree", "node", () => {
+    ensureSpacing();
+  });
   cy.on("mouseover", "node, edge", () => {
     if (container.value) container.value.style.cursor = "pointer";
   });
@@ -181,6 +201,7 @@ watch(
 watch(
   () => [props.group, props.layout],
   async () => {
+    cy.stop(true, false);
     applyVisibility();
     await nextTick();
     arrange();

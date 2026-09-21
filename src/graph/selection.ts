@@ -1,4 +1,5 @@
 import type { Core } from "cytoscape";
+import { belongsToGroup } from "../characters";
 export function applyGraphVisibility(
   cy: Core,
   options: {
@@ -13,7 +14,7 @@ export function applyGraphVisibility(
     cy.elements().removeClass("dimmed chosen hidden neighbor connected");
     if (options.group) {
       cy.nodes()
-        .filter((n) => (n.data("group") || "未分组") !== options.group)
+        .filter((n) => !belongsToGroup(n.data(), options.group))
         .addClass("hidden");
       cy.edges()
         .filter(
@@ -38,5 +39,10 @@ export function applyGraphVisibility(
           .addClass("dimmed");
     }
     cy.edges().toggleClass("no-label", !options.labels);
+  });
+  // Class changes leave Cytoscape's derived :visible cache valid until styles
+  // are read. Resolve display before a layout/fit selects visible elements.
+  cy.elements().forEach((element) => {
+    element.style("display");
   });
 }

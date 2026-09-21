@@ -5,6 +5,7 @@ import { addCharacter, clone, palette, parseAtlas, relationFrom, relationLabel, 
 import { createSample } from './sample'
 import { loadWorkspace, saveWorkspace, storageDescription } from './storage'
 import { parseColorHistory } from './colors'
+import { characterGroups, belongsToGroup, sortCharacters, initialRelation, type InitialDirection } from './characters'
 
 export function useWorkspace() {
   const library=ref<Library>(createLibrary(createSample())),data=ref<Atlas>(clone(library.value.graphs[0]!.data))
@@ -12,7 +13,7 @@ export function useWorkspace() {
   const query=ref(''),group=ref(''),selectedId=ref(''),selectedKind=ref<'character'|'relation'|'none'>('none')
   const labels=ref(true),neighborhood=ref(false),layout=ref('fcose'),inspector=ref(false),zoom=ref(100)
   const graph=ref<InstanceType<typeof RelationshipGraph>>(),modal=ref(''),formError=ref(''),toast=ref(''),toastError=ref(false),jsonInput=ref<HTMLInputElement>()
-  const draftCharacter=ref({id:'',name:'',group:'',color:palette[0]!,notes:'',tags:'',initialTo:'',initialLabel:'朋友',initialDirection:'two-way' as 'one-way'|'two-way'})
+  const draftCharacter=ref({id:'',name:'',groups:[] as string[],color:palette[0]!,notes:'',tags:'',initialTo:'',initialLabel:'朋友',initialDirection:'two-way' as InitialDirection})
   const draftRelation=ref({id:'',from:'',to:'',label:'',direction:'one-way' as 'one-way'|'two-way',description:''})
   const draftProject=ref({title:''}),creatingProject=ref(false),bookQuery=ref('')
   const isEditing=ref(false),pendingImport=ref<{data:Atlas;warnings:string[];library?:Library}|null>(null)
@@ -20,8 +21,9 @@ export function useWorkspace() {
   const confirmation=ref<{title:string;description:string;action:()=>void;destructive:boolean}|null>(null)
   let toastTimer:ReturnType<typeof setTimeout>,saveNumber=0,pendingSaves=0
   const theme=computed(()=>library.value.theme)
-  const groups=computed(()=>[...new Set(data.value.characters.map(c=>c.group||'未分组'))])
-  const characters=computed(()=>data.value.characters.filter(c=>(!group.value||(c.group||'未分组')===group.value)&&`${c.name} ${c.id} ${c.tags?.join(' ')}`.toLowerCase().includes(query.value.toLowerCase())))
+  const groups=computed(()=>[...new Set(data.value.characters.flatMap(c=>characterGroups(c).length?characterGroups(c):['未分组']))])
+  const sortedCharacters=computed(()=>sortCharacters(data.value.characters))
+  const characters=computed(()=>data.value.characters.filter(c=>belongsToGroup(c,group.value)&&`${c.name} ${c.id} ${characterGroups(c).join(' ')} ${c.tags?.join(' ')}`.toLowerCase().includes(query.value.toLowerCase())))
   const books=computed(()=>library.value.graphs.filter(s=>s.data.title.toLowerCase().includes(bookQuery.value.toLowerCase())))
   const character=computed(()=>selectedKind.value==='character'?data.value.characters.find(c=>c.id===selectedId.value):undefined)
   const relation=computed(()=>selectedKind.value==='relation'?data.value.relations.find(r=>r.id===selectedId.value):undefined)
@@ -36,7 +38,7 @@ export function useWorkspace() {
   const floatingRows=computed(()=>{
     if(!floatingCharacter.value)return []
     const id=floatingCharacter.value.id
-    return data.value.characters.filter(c=>c.id!==id&&`${c.name} ${c.group}`.includes(floatQuery.value)).map(c=>({character:c,relations:data.value.relations.filter(r=>(r.from===id&&r.to===c.id)||(r.to===id&&r.from===c.id))})).sort((a,b)=>Number(!!b.relations.length)-Number(!!a.relations.length))
+    return data.value.characters.filter(c=>c.id!==id&&`${c.name} ${characterGroups(c).join(' ')}`.includes(floatQuery.value)).map(c=>({character:c,relations:data.value.relations.filter(r=>(r.from===id&&r.to===c.id)||(r.to===id&&r.from===c.id))})).sort((a,b)=>Number(!!b.relations.length)-Number(!!a.relations.length))
   })
   function enterCharacter(id:string){clearTimeout(hideTimer);hoverId.value=id;if(!pinnedId.value){floatingId.value=id;floatQuery.value=''}}
   function leaveCharacter(){hoverId.value='';clearTimeout(hideTimer);hideTimer=setTimeout(()=>{if(!pinnedId.value)floatingId.value=''},180)}
@@ -59,13 +61,13 @@ export function useWorkspace() {
   function cleanSelection(){if(selectedKind.value==='character'&&!character.value||selectedKind.value==='relation'&&!relation.value){selectedKind.value='none';selectedId.value=''}if(group.value&&!groups.value.includes(group.value))group.value='';if(floatingId.value&&!floatingCharacter.value)closeFloating()}
   function select(kind:'character'|'relation'|'none',id:string,focus=false){selectedKind.value=kind;selectedId.value=id;if(kind!=='none')inspector.value=true;if(focus)graph.value?.focus(id)}
   function openModal(kind:string){formError.value='';closeFloating();modal.value=kind}
-  function editCharacter(c?:Character){isEditing.value=!!c;draftCharacter.value={id:c?.id||uid('character'),name:c?.name||'',group:c?.group||group.value||'',color:c?.color||palette[groups.value.length%palette.length]!,notes:c?.notes||'',tags:c?.tags?.join(' ')||'',initialTo:'',initialLabel:'朋友',initialDirection:'two-way'};openModal('character')}
+  function editCharacter(c?:Character){isEditing.value=!!c;draftCharacter.value={id:c?.id||uid('character'),name:c?.name||'',groups:c?characterGroups(c):group.value&&group.value!=='未分组'?[group.value]:[],color:c?.color||palette[groups.value.length%palette.length]!,notes:c?.notes||'',tags:c?.tags?.join(' ')||'',initialTo:'',initialLabel:'朋友',initialDirection:'two-way'};openModal('character')}
   function submitCharacter(){try{
     const d=draftCharacter.value,existing=data.value.characters.find(c=>c.id===d.id)
-    const c:Character={...existing,id:d.id,name:d.name.trim(),group:d.group.trim()||'未分组',color:d.color,notes:d.notes,tags:splitTags(d.tags)}
+    const c:Character={...existing,id:d.id,name:d.name.trim(),groups:[...d.groups],color:d.color,notes:d.notes,tags:splitTags(d.tags)}
     if(!c.name)throw new Error('请填写角色名称。')
     let next=isEditing.value?{...data.value,characters:data.value.characters.map(old=>old.id===c.id?c:old)}:addCharacter(data.value,c)
-    if(!isEditing.value&&d.initialTo){if(!d.initialLabel.trim())throw new Error('请填写完整的初始关系。');next={...next,relations:[...next.relations,{id:uid('relation'),from:c.id,to:d.initialTo,label:d.initialLabel.trim(),direction:d.initialDirection}]}}
+    if(!isEditing.value&&d.initialTo){if(!d.initialLabel.trim())throw new Error('请填写完整的初始关系。');next={...next,relations:[...next.relations,{id:uid('relation'),...initialRelation(c.id,d.initialTo,d.initialDirection),label:d.initialLabel.trim()}]}}
     commit(parseAtlas(next).data);group.value='';select('character',c.id);modal.value='';notify(isEditing.value?'角色档案已更新':`已添加角色「${c.name}」`)
   }catch(e){formError.value=errorMessage(e)}}
   function editRelation(r?:Relation){isEditing.value=!!r;draftRelation.value={id:r?.id||uid('relation'),from:r?.from||character.value?.id||data.value.characters[0]?.id||'',to:r?.to||data.value.characters.find(c=>c.id!==(character.value?.id||data.value.characters[0]?.id))?.id||data.value.characters[0]?.id||'',label:r?relationLabel(r):'',direction:r?.direction||'one-way',description:r?.description||''};openModal('relation')}
@@ -112,5 +114,5 @@ export function useWorkspace() {
     }catch(e){ready.value=true;recoveryBlocked.value=true;saveStatus.value='需要恢复数据';notify(`本地书架未覆盖：${errorMessage(e)}`,true)}
   })
   onBeforeUnmount(()=>{document.removeEventListener('keydown',keydown);window.removeEventListener('beforeunload',beforeUnload);clearTimeout(toastTimer);clearTimeout(hideTimer)})
-  return {library,data,ready,recoveryBlocked,saveStatus,storageLabel,query,group,selectedId,selectedKind,labels,neighborhood,layout,inspector,zoom,graph,modal,formError,toast,toastError,jsonInput,draftCharacter,draftRelation,draftProject,creatingProject,bookQuery,books,isEditing,pendingImport,undoStack,redoStack,confirmation,theme,themes,groups,characters,character,relation,linked,selection,connectedPeople,name,relationLabel,relationFrom,hoverId,floatingId,pinnedId,floatQuery,floatingCharacter,floatingRows,enterCharacter,leaveCharacter,holdFloating,releaseFloating,pinCharacter,closeFloating,persist,undo,redo,select,openModal,editCharacter,submitCharacter,editRelation,submitRelation,deleteCharacter,deleteRelation,activate,newProject,editProject,submitProject,deleteStory,changeTheme,importJson,readJson,confirmImport,exportJson,exportImage,exporting,trapFocus,palette}
+  return {sortedCharacters,characterGroups,library,data,ready,recoveryBlocked,saveStatus,storageLabel,query,group,selectedId,selectedKind,labels,neighborhood,layout,inspector,zoom,graph,modal,formError,toast,toastError,jsonInput,draftCharacter,draftRelation,draftProject,creatingProject,bookQuery,books,isEditing,pendingImport,undoStack,redoStack,confirmation,theme,themes,groups,characters,character,relation,linked,selection,connectedPeople,name,relationLabel,relationFrom,hoverId,floatingId,pinnedId,floatQuery,floatingCharacter,floatingRows,enterCharacter,leaveCharacter,holdFloating,releaseFloating,pinCharacter,closeFloating,persist,undo,redo,select,openModal,editCharacter,submitCharacter,editRelation,submitRelation,deleteCharacter,deleteRelation,activate,newProject,editProject,submitProject,deleteStory,changeTheme,importJson,readJson,confirmImport,exportJson,exportImage,exporting,trapFocus,palette}
 }

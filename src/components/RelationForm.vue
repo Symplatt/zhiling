@@ -2,7 +2,7 @@
 import { ArrowLeftRight, ArrowRight, Link2 } from "lucide-vue-next";
 import { useWorkspaceContext } from "../workspaceContext";
 const {
-  data,
+  sortedCharacters,
   modal,
   formError,
   draftRelation,
@@ -17,14 +17,14 @@ const {
       <label
         >起点角色（A）<select v-model="draftRelation.from" required>
           <option value="" disabled>选择角色</option>
-          <option v-for="c in data.characters" :key="c.id" :value="c.id">
+          <option v-for="c in sortedCharacters" :key="c.id" :value="c.id">
             {{ c.name }}
           </option>
         </select></label
       ><label
         >终点角色（B）<select v-model="draftRelation.to" required>
           <option value="" disabled>选择角色</option>
-          <option v-for="c in data.characters" :key="c.id" :value="c.id">
+          <option v-for="c in sortedCharacters" :key="c.id" :value="c.id">
             {{ c.name }}
           </option>
         </select></label

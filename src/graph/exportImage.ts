@@ -1,5 +1,19 @@
 import cytoscape, { type Core } from "cytoscape";
-import { graphLayoutOptions, ensureGraphSpacing } from "./layout";
+export function snapshotGraph(cy: Core) {
+  return {
+    elements: cy.elements().map((item) => ({
+      // Cytoscape retains these objects; another core must never share them.
+      data: structuredClone(item.data()),
+      position: item.isNode() ? { ...item.position() } : undefined,
+      group: item.group(),
+      classes: item
+        .classes()
+        .filter((c) => ["two-way", "self-relation", "no-label"].includes(c))
+        .join(" "),
+    })),
+    style: structuredClone(cy.json().style),
+  };
+}
 export async function exportGraphImage(
   cy: Core,
   container: HTMLElement,
@@ -14,24 +28,13 @@ export async function exportGraphImage(
   try {
     const css = getComputedStyle(container),
       background = css.getPropertyValue("--paper").trim();
-    const elements: cytoscape.ElementDefinition[] = cy
-      .elements()
-      .map((item) => ({
-        data: item.data(),
-        position: item.isNode() ? item.position() : undefined,
-        group: item.group(),
-        classes: item.hasClass("two-way") ? "two-way" : "",
-      }));
+    const snapshot = snapshotGraph(cy);
     exported = cytoscape({
       container: host,
-      elements,
-      style: cy.json().style,
-      layout: { name: "preset" },
+      ...snapshot,
+      layout: { name: "preset", fit: false },
       pixelRatio: 1,
     });
-    exported.elements().removeClass("hidden dimmed chosen no-label");
-    exported.layout(graphLayoutOptions("fcose", exported.nodes().length)).run();
-    ensureGraphSpacing(exported);
     await document.fonts.ready;
     const bounds = exported.elements().boundingBox(),
       scale = Math.min(

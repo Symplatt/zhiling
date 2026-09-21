@@ -1,6 +1,7 @@
+import { characterGroups } from './characters'
 export const palette = ['#4f8072', '#a97f5c', '#8480a7', '#678ca3', '#b27081', '#798660']
 export interface Character {
-  id: string; name: string; group?: string; color?: string; notes?: string; tags?: string[]
+  id: string; name: string; groups?: string[]; group?: string; color?: string; notes?: string; tags?: string[]
   [key: string]: unknown
 }
 export interface Relation {
@@ -32,8 +33,9 @@ export function parseAtlas(input: unknown): { data: Atlas; warnings: string[] } 
     if (ids.has(id)) throw new Error(`角色 ID「${id}」重复。请为每个角色设置唯一 ID 后重新导入。`)
     ids.add(id)
     if (name.length > 60 || id.length > 200) throw new Error(`角色「${name.slice(0, 20)}」的名称或 ID 过长。`)
-    const { avatar: _legacyAvatar, ...fields } = raw
-    return { ...fields, id, name, group: str(raw.group, '未分组'), color: /^#[0-9a-f]{6}$/i.test(str(raw.color)) ? str(raw.color) : palette[0], notes: str(raw.notes), tags: typeof raw.tags === 'string' ? splitTags(raw.tags) : Array.isArray(raw.tags) ? raw.tags.filter((x): x is string => typeof x === 'string') : [] }
+    if (raw.groups !== undefined && (!Array.isArray(raw.groups) || raw.groups.some(g => typeof g !== 'string'))) throw new Error(`角色「${name}」的 groups 必须是阵营名称数组。`)
+    const { avatar: _legacyAvatar, group: _legacyGroup, ...fields } = raw
+    return { ...fields, id, name, groups: characterGroups({ groups: raw.groups as string[] | undefined, group: str(raw.group) }), color: /^#[0-9a-f]{6}$/i.test(str(raw.color)) ? str(raw.color) : palette[0], notes: str(raw.notes), tags: typeof raw.tags === 'string' ? splitTags(raw.tags) : Array.isArray(raw.tags) ? raw.tags.filter((x): x is string => typeof x === 'string') : [] }
   })
   const relations = input.relations.map((raw, i): Relation => {
     if (!object(raw)) throw new Error(`第 ${i + 1} 条关系格式不正确。`)

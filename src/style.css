@@ -845,19 +845,19 @@ button img {
   min-width: 0;
 }
 .relation-row strong {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 500;
   color: #718068;
 }
 .relation-row small {
-  font-size: 8px;
+  font-size: 10px;
   color: #a0aa95;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .relation-pill {
-  font-size: 8px;
+  font-size: 10px;
   color: #97a788;
   background: #f0f5e8;
   padding: 3px 5px;

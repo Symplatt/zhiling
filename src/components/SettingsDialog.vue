@@ -68,8 +68,8 @@ const {
     </div>
     <label class="layout-setting"
       >自动布局方式<select v-model="layout">
-        <option value="fcose">自然分布 · fCoSE</option>
-        <option value="circle">环形分布 · Circle</option>
+        <option value="fcose">自然分布</option>
+        <option value="circle">环形分布</option>
       </select></label
     >
     <p class="dialog-copy">

@@ -1,5 +1,8 @@
 # 织灵 · 角色关系网
 
+该项目基本通过 vibe coding 完成，使用的模型为 GPT-6 Astra，推理强度：高
+README也是ChatGPT生成的，开发者自己都没看完过，反正UI清晰交互简单，安装完自己摸索着用就行。
+
 ## 打开软件
 
 从 [GitHub Releases](https://github.com/Symplatt/zhiling/releases/latest) 下载 **Zhiling-Setup-2.0.5.exe** 和 **Zhiling-Guide-2.0.5.txt**。在 Windows 10/11（64 位）上双击安装包，它会自动安装到当前用户目录、创建“织灵（桌面版）”快捷方式并打开软件。不需要 Python、Node.js、浏览器或联网下载依赖。以后双击该快捷方式即可。给别人使用时发送这两个文件即可；[简明安装与使用说明](docs/安装与使用说明.txt)也可在线阅读。

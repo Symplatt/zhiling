@@ -3,6 +3,9 @@ const root=path.resolve(__dirname,process.env.ZHILING_TEST_DIR||'../test-results
 fs.mkdirSync(path.join(profile,'workspace'),{recursive:true})
 const pngPath=path.join(root,'whole-graph.png');if(fs.existsSync(pngPath))fs.unlinkSync(pngPath)
 const library={version:2,revision:1,activeId:'s',theme:'grass',graphs:[{id:'s',updatedAt:new Date().toISOString(),data:{version:1,title:'合成图谱测试',description:'',characters:[{id:'a',name:'青禾'},{id:'b',name:'月白'}],relations:[{id:'r',from:'a',to:'b',label:'母亲',reverseLabel:'女儿',mode:'paired',direction:'two-way'}]}}]}
+const {nativeImage}=require('electron')
+const bitmap=Buffer.alloc(32*32*4);for(let i=0;i<bitmap.length;i+=4){bitmap[i]=255;bitmap[i+3]=255}
+library.graphs[0].data.characters[0].avatar=nativeImage.createFromBitmap(bitmap,{width:32,height:32}).toDataURL()
 fs.writeFileSync(path.join(profile,'workspace/library.json'),JSON.stringify(library))
 app.setPath('userData',profile);app.setPath('sessionData',path.join(root,'session'))
 app.on('browser-window-created',(_,win)=>{win.hide();win.webContents.once('did-finish-load',async()=>{
@@ -33,6 +36,11 @@ app.on('browser-window-created',(_,win)=>{win.hide();win.webContents.once('did-f
     const afterExport=await win.webContents.executeJavaScript(`(() => { const cy=document.querySelector('.graph-engine')._cyreg.cy; return JSON.stringify({nodes:cy.nodes().map(n=>({...n.position()})),pan:cy.pan(),zoom:cy.zoom()}); })()`)
     assert.equal(afterExport,beforeExport,'PNG export must preserve the live viewport and manually placed nodes')
     assert(png.readUInt32BE(16)>png.readUInt32BE(20),'PNG must retain the manually arranged wide layout')
+    const exportedBitmap=nativeImage.createFromBuffer(png).toBitmap();let bluePixels=0
+    for(let i=0;i<exportedBitmap.length;i+=4)if(exportedBitmap[i]>230&&exportedBitmap[i+1]<25&&exportedBitmap[i+2]<25)bluePixels++
+    assert(bluePixels>1000,'PNG must include the actual avatar image')
+    await win.webContents.executeJavaScript(`Array.from(document.querySelectorAll('button')).find(b=>b.textContent.trim()==='保存').click()`)
+    await win.webContents.executeJavaScript(`new Promise((resolve,reject)=>{let n=0;const id=setInterval(async()=>{const d=(await window.desktop.load()).data;if(d.localLayouts?.s?.b?.x===480&&d.localLayouts?.s?.b?.y===200){clearInterval(id);resolve()}else if(++n>100){clearInterval(id);reject(new Error('Layout save timed out'))}},50)})`)
     const all={...library,graphs:Array.from({length:120},(_,i)=>({...library.graphs[0],id:'s'+i,data:{...library.graphs[0].data,title:'测试'+i}})),activeId:'s119'}
     await win.webContents.executeJavaScript(`window.desktop.save(${JSON.stringify(all)})`)
     const restored=await win.webContents.executeJavaScript('window.desktop.load()');assert.equal(restored.data.graphs.length,120)

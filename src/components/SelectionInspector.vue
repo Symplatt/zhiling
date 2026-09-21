@@ -56,13 +56,13 @@ const {
     </div>
     <div class="inspector-scroll">
       <template v-if="character">
-        <div class="profile">
+        <div class="profile" :class="{ 'profile-with-avatar': character.avatar }">
           <span
             class="avatar profile-avatar"
             :style="{
               '--character-color': character.color || palette[0],
             }"
-            ><span>{{ character.name }}</span
+            ><img v-if="character.avatar" :src="character.avatar" alt="" /><span v-else>{{ character.name }}</span
             ><i></i
           ></span>
         <h2>{{ character.name }}</h2>

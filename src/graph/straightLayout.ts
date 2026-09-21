@@ -79,6 +79,8 @@ export function improveStraightLayout(cy: Core) {
     }));
   const links = cy
     .edges(":visible")
+    .toArray()
+    .filter(e => (e.data('parallelCount') || 1) === 1)
     .map((e) => ({ from: e.source().id(), to: e.target().id() }));
   const positions = clearStraightSegments(boxes, links);
   cy.batch(() =>
@@ -94,8 +96,8 @@ export function separateRelationshipLabels(cy: Core) {
   });
   cy.batch(() =>
     pairs.forEach((edges) =>
-      edges.forEach((edge, index) => {
-        edge.data("labelOffset", (index - (edges.length - 1) / 2) * 22);
+      edges.forEach((edge) => {
+        edge.data("labelOffset", 0);
         edge.data("parallelCount", edges.length);
       }),
     ),

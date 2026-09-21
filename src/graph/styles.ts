@@ -45,7 +45,12 @@ export const graphStyles: StylesheetJson = [
     },
   },
   { selector: "edge.two-way", style: { "source-arrow-shape": "triangle" } },
-  { selector: "edge[parallelCount > 1]", style: { "text-rotation": "none" } },
+  { selector: "edge[parallelCount > 1]", style: { "curve-style": "bezier", "control-point-step-size": 65, "text-rotation": "autorotate" } },
+  { selector: "node.has-avatar", style: {
+    "background-image": "data(avatar)", "background-fit": "cover",
+    "background-clip": "node", "text-halign": "right", "text-valign": "center",
+    "text-margin-x": 10, "text-max-width": "160px",
+  } },
   {
     selector: "edge.self-relation",
     style: {

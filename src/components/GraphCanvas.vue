@@ -19,6 +19,9 @@ const {
   neighborhood,
   layout,
   layoutDensity,
+  nodeSize,
+  localPositions,
+  rememberPositions,
   zoom,
   graph,
   undoStack,
@@ -50,6 +53,10 @@ const {
       :key="library.activeId"
       ref="graph"
       :data="data"
+      :story-id="library.activeId"
+      :positions="localPositions"
+      :node-size="nodeSize"
+      @positions="rememberPositions"
       :selected="selection"
       :group="group"
       :labels="labels"

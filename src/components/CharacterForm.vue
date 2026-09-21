@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { Check } from "lucide-vue-next";
+import { ref } from 'vue';
 import { useWorkspaceContext } from "../workspaceContext";
 import CharacterColorField from "./CharacterColorField.vue";
 import CharacterGroupField from "./CharacterGroupField.vue";
+import CharacterAvatarField from "./CharacterAvatarField.vue";
+const avatarBusy = ref(false);
 const {
   data,
   modal,
@@ -14,8 +17,9 @@ const {
 } = useWorkspaceContext();
 </script>
 <template>
-  <form @submit.prevent="submitCharacter">
-    <div class="form-grid">
+  <form @submit.prevent="!avatarBusy && submitCharacter()">
+    <CharacterAvatarField @busy="avatarBusy = $event" />
+    <div class="form-grid character-name-field">
       <label
         >角色名称 <span>*</span
         ><input v-model="draftCharacter.name" required maxlength="60"
@@ -64,7 +68,7 @@ const {
     <div class="modal-actions">
       <button type="button" class="secondary-button" @click="modal = ''">
         取消</button
-      ><button type="submit" class="primary-button">
+      ><button type="submit" class="primary-button" :disabled="avatarBusy">
         <Check :size="15" />{{ isEditing ? "保存修改" : "添加角色" }}
       </button>
     </div>

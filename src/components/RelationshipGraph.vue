@@ -4,6 +4,7 @@ import fcose from "cytoscape-fcose";
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { graphLayoutOptions, ensureGraphSpacing, scaleGraphSpacing } from "../graph/layout";
 import { densityScale } from "../layoutDensity";
+import { graphPositions, type NodePositions } from "../localLayout";
 import { graphStyles, applyGraphTheme } from "../graph/styles";
 import { applyGraphVisibility } from "../graph/selection";
 import { exportGraphImage } from "../graph/exportImage";
@@ -17,12 +18,15 @@ import { characterGroups } from "../characters";
 cytoscape.use(fcose);
 const props = defineProps<{
   data: Atlas;
+  storyId: string;
   selected: string;
   group: string;
   labels: boolean;
   neighborhood: boolean;
   layout: string;
   density: number;
+  nodeSize: number;
+  positions: NodePositions;
   theme: string;
 }>();
 const emit = defineEmits<{
@@ -31,6 +35,7 @@ const emit = defineEmits<{
   ready: [];
   hover: [id: string];
   leave: [];
+  positions: [positions: NodePositions];
 }>();
 const container = ref<HTMLDivElement>();
 const hoverNode = ref("");
@@ -67,6 +72,13 @@ let cy: Core,
   observer: ResizeObserver,
   activeLayout: ReturnType<Core["layout"]> | undefined;
 let priorIds = "";
+function positions() { return cy ? graphPositions(cy) : {}; }
+function recordPositions() { emit('positions', positions()); }
+function applyNodeSize() {
+  const scale = densityScale(props.nodeSize);
+  cy.style().selector('node').style({ width: 76 * scale, height: 76 * scale, 'font-size': 15 * Math.sqrt(scale), 'text-max-width': `${66 * scale}px` })
+    .selector('node.has-avatar').style({ 'text-max-width': '160px' }).update();
+}
 function applyVisibility() {
   applyGraphVisibility(cy, props);
 }
@@ -87,6 +99,7 @@ function arrange() {
   improveStraightLayout(cy);
   scaleGraphSpacing(cy, densityScale(props.density));
   fitArrangement();
+  recordPositions();
   emit("ready");
 }
 function fitArrangement() {
@@ -103,6 +116,7 @@ function ensureSpacing() {
 
 function sync() {
   if (!cy) return;
+  const firstLoad = priorIds === '';
   const ids = JSON.stringify([
     props.data.characters.map((c) => c.id),
     props.data.relations.map((r) => [r.id, r.from, r.to]),
@@ -120,9 +134,13 @@ function sync() {
           label: c.name,
           color: c.color || "#4f8072",
           groups: characterGroups(c),
+          avatar: c.avatar || '',
           rawId: c.id,
         },
-        position: positions.get(`c:${c.id}`),
+        // Cytoscape mutates the supplied object while dragging. Keep the saved
+        // snapshot independent so movement is detected and queued for saving.
+        position: positions.get(`c:${c.id}`) || (props.positions[c.id] ? { ...props.positions[c.id]! } : undefined),
+        classes: c.avatar ? 'has-avatar' : '',
       })),
     );
     cy.add(
@@ -146,11 +164,16 @@ function sync() {
   });
   applyVisibility();
   separateRelationshipLabels(cy);
-  if (priorIds !== ids) {
+  applyNodeSize();
+  if (firstLoad && props.data.characters.length && props.data.characters.every(c => props.positions[c.id])) {
+    priorIds = ids;
+    fitArrangement();
+  } else if (priorIds !== ids) {
     priorIds = ids;
     arrange();
   } else {
     ensureSpacing();
+    recordPositions();
   }
 }
 onMounted(() => {
@@ -176,6 +199,7 @@ onMounted(() => {
   cy.on("zoom", () => emit("zoom", Math.round(cy.zoom() * 100)));
   cy.on("dragfree", "node", () => {
     ensureSpacing();
+    recordPositions();
   });
   cy.on("mouseover", "node, edge", () => {
     if (container.value) container.value.style.cursor = "pointer";
@@ -219,6 +243,14 @@ watch(() => props.density, (value, previous) => {
   cy.nodes().stop(true, false);
   scaleGraphSpacing(cy, densityScale(value) / densityScale(previous));
   fitArrangement();
+  recordPositions();
+});
+watch(() => props.nodeSize, () => {
+  if (!cy) return;
+  applyNodeSize();
+  ensureSpacing();
+  fitArrangement();
+  recordPositions();
 });
 function focus(id: string) {
   const node = cy?.getElementById(`c:${id}`);
@@ -242,7 +274,7 @@ function exportImage() {
   return exportGraphImage(cy, container.value!);
 }
 
-defineExpose({ arrange, focus, zoomBy, fit, exportImage });
+defineExpose({ arrange, focus, zoomBy, fit, exportImage, positions, storyId: () => props.storyId });
 onBeforeUnmount(() => {
   clearTimeout(pinTimer);
   activeLayout?.stop();

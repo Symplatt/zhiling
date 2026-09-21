@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { AlertCircle, CheckCheck, Link2, Users } from "lucide-vue-next";
 import { useWorkspaceContext } from "../workspaceContext";
-const { data, recoveryBlocked, saveStatus, storageLabel } =
+const { data, recoveryBlocked, displaySaveStatus: saveStatus, storageLabel } =
   useWorkspaceContext();
 </script>
 <template>

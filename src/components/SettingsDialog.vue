@@ -7,6 +7,7 @@ const {
   neighborhood,
   layout,
   layoutDensity,
+  nodeSize,
   modal,
   theme,
   themes,
@@ -90,6 +91,15 @@ const {
             :value="level"
             :aria-label="`排列稀疏程度 ${level} 档`"
           />
+          <strong>{{ level }} 档</strong>
+        </label>
+      </div>
+    </fieldset>
+    <fieldset class="density-setting">
+      <legend>角色头像大小</legend>
+      <div class="density-levels">
+        <label v-for="level in densityLevels" :key="level" :class="{ selected: nodeSize === level }">
+          <input v-model="nodeSize" type="radio" name="node-size" :value="level" :aria-label="`角色头像大小 ${level} 档`" />
           <strong>{{ level }} 档</strong>
         </label>
       </div>

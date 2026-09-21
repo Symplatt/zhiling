@@ -119,7 +119,7 @@ const {
           <span
             class="avatar small-avatar"
             :style="{ '--character-color': c.color || palette[0] }"
-            ><span>{{ c.name }}</span>
+            ><img v-if="c.avatar" :src="c.avatar" alt="" /><span v-else>{{ c.name }}</span>
           </span>
           <span class="character-list-info">
             <strong>{{ c.name }}</strong>

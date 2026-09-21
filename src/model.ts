@@ -1,7 +1,8 @@
 import { characterGroups } from './characters'
+import { parseAvatar } from './avatars'
 export const palette = ['#4f8072', '#a97f5c', '#8480a7', '#678ca3', '#b27081', '#798660']
 export interface Character {
-  id: string; name: string; groups?: string[]; group?: string; color?: string; notes?: string; tags?: string[]
+  id: string; name: string; groups?: string[]; group?: string; color?: string; notes?: string; tags?: string[]; avatar?: string
   [key: string]: unknown
 }
 export interface Relation {
@@ -34,8 +35,9 @@ export function parseAtlas(input: unknown): { data: Atlas; warnings: string[] } 
     ids.add(id)
     if (name.length > 60 || id.length > 200) throw new Error(`角色「${name.slice(0, 20)}」的名称或 ID 过长。`)
     if (raw.groups !== undefined && (!Array.isArray(raw.groups) || raw.groups.some(g => typeof g !== 'string'))) throw new Error(`角色「${name}」的 groups 必须是阵营名称数组。`)
-    const { avatar: _legacyAvatar, group: _legacyGroup, ...fields } = raw
-    return { ...fields, id, name, groups: characterGroups({ groups: raw.groups as string[] | undefined, group: str(raw.group) }), color: /^#[0-9a-f]{6}$/i.test(str(raw.color)) ? str(raw.color) : palette[0], notes: str(raw.notes), tags: typeof raw.tags === 'string' ? splitTags(raw.tags) : Array.isArray(raw.tags) ? raw.tags.filter((x): x is string => typeof x === 'string') : [] }
+    const { avatar: _legacyAvatar, group: _legacyGroup, position: _position, ...fields } = raw
+    const avatar = parseAvatar(raw.avatar)
+    return { ...fields, ...(avatar ? { avatar } : {}), id, name, groups: characterGroups({ groups: raw.groups as string[] | undefined, group: str(raw.group) }), color: /^#[0-9a-f]{6}$/i.test(str(raw.color)) ? str(raw.color) : palette[0], notes: str(raw.notes), tags: typeof raw.tags === 'string' ? splitTags(raw.tags) : Array.isArray(raw.tags) ? raw.tags.filter((x): x is string => typeof x === 'string') : [] }
   })
   const relations = input.relations.map((raw, i): Relation => {
     if (!object(raw)) throw new Error(`第 ${i + 1} 条关系格式不正确。`)
@@ -54,7 +56,7 @@ export function parseAtlas(input: unknown): { data: Atlas; warnings: string[] } 
     const { mode: _legacyMode, reverseLabel: _legacyReverse, ...fields } = raw
     return { ...fields, id, from, to, label, direction: raw.direction === 'two-way' ? 'two-way' : 'one-way', description: str(raw.description) }
   })
-  const { description: _legacyDescription, ...fields } = input
+  const { description: _legacyDescription, localLayouts: _layouts, positions: _positions, ...fields } = input
   return { data: { ...fields, version: 1, title: str(input.title, '未命名故事'), characters, relations }, warnings }
 }
 export function removeCharacter(data: Atlas, id: string): Atlas {

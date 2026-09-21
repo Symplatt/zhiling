@@ -18,7 +18,7 @@ it("moves an unrelated node off a straight segment without mutating input", () =
   expect(result[0]).toEqual(nodes[0]);
   expect(result[1]).toEqual(nodes[1]);
 });
-it("keeps straight parallel relations with separate labels and isolates export coordinates", () => {
+it("curves only parallel relations and isolates export coordinates", () => {
   const cy = cytoscape({
     headless: true,
     styleEnabled: true,
@@ -57,14 +57,15 @@ it("keeps straight parallel relations with separate labels and isolates export c
   try {
     separateRelationshipLabels(cy);
     expect(cy.edges().map((e) => e.style("curve-style"))).toEqual([
-      "straight",
-      "straight",
+      "bezier",
+      "bezier",
     ]);
-    expect(cy.$id("ab").data("labelOffset")).not.toBe(
-      cy.$id("ba").data("labelOffset"),
-    );
+    expect(cy.$id("ab").data("parallelCount")).toBe(2);
     cy.$id("b").position({ x: 0, y: 600 });
-    expect(cy.edges().every((edge) => edge.style("text-rotation") === "none")).toBe(true);
+    expect(cy.edges().every((edge) => edge.style("text-rotation") === "autorotate")).toBe(true);
+    cy.remove(cy.$id("ba"));
+    separateRelationshipLabels(cy);
+    expect(cy.$id("ab").style("curve-style")).toBe("straight");
     const before = cy.nodes().map((n) => ({ ...n.position() }));
     cy.$id("a").addClass("chosen hidden");
     const copy = cytoscape({

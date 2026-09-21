@@ -1,12 +1,13 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type RelationshipGraph from './components/RelationshipGraph.vue'
-import { createLibrary, parseLibrary, story, themes, type Library, type Theme } from './library'
+import { createLibrary, parseLibrary, exportLibrary, story, themes, type Library, type Theme } from './library'
 import { addCharacter, clone, palette, parseAtlas, relationFrom, relationLabel, removeCharacter, splitTags, uid, type Atlas, type Character, type Relation } from './model'
 import { createSample } from './sample'
 import { loadWorkspace, saveWorkspace, storageDescription } from './storage'
 import { parseColorHistory } from './colors'
 import { characterGroups, belongsToGroup, sortCharacters, initialRelation, type InitialDirection } from './characters'
 import { parseLayoutDensity } from './layoutDensity'
+import type { NodePositions } from './localLayout'
 
 export function useWorkspace() {
   const library=ref<Library>(createLibrary(createSample())),data=ref<Atlas>(clone(library.value.graphs[0]!.data))
@@ -14,7 +15,7 @@ export function useWorkspace() {
   const query=ref(''),group=ref(''),selectedId=ref(''),selectedKind=ref<'character'|'relation'|'none'>('none')
   const labels=ref(true),neighborhood=ref(false),layout=ref('fcose'),inspector=ref(false),zoom=ref(100)
   const graph=ref<InstanceType<typeof RelationshipGraph>>(),modal=ref(''),formError=ref(''),toast=ref(''),toastError=ref(false),jsonInput=ref<HTMLInputElement>()
-  const draftCharacter=ref({id:'',name:'',groups:[] as string[],color:palette[0]!,notes:'',tags:'',initialTo:'',initialLabel:'朋友',initialDirection:'two-way' as InitialDirection})
+  const draftCharacter=ref({id:'',name:'',groups:[] as string[],color:palette[0]!,avatar:'',notes:'',tags:'',initialTo:'',initialLabel:'朋友',initialDirection:'two-way' as InitialDirection})
   const draftRelation=ref({id:'',from:'',to:'',label:'',direction:'one-way' as 'one-way'|'two-way',description:''})
   const draftProject=ref({title:''}),creatingProject=ref(false),bookQuery=ref('')
   const isEditing=ref(false),pendingImport=ref<{data:Atlas;warnings:string[];library?:Library}|null>(null)
@@ -22,6 +23,20 @@ export function useWorkspace() {
   const confirmation=ref<{title:string;description:string;action:()=>void;destructive:boolean}|null>(null)
   let toastTimer:ReturnType<typeof setTimeout>,saveNumber=0,pendingSaves=0
   const theme=computed(()=>library.value.theme)
+  const nodeSize=computed({get:()=>parseLayoutDensity(library.value.nodeSize),set:(value:number)=>{library.value.nodeSize=parseLayoutDensity(value);void persist().catch(()=>{})}})
+  const localPositions=computed(()=>library.value.localLayouts?.[library.value.activeId] || {})
+  let layoutSaveTimer:ReturnType<typeof setTimeout>|undefined
+  const draftBaseline=ref('')
+  const activeDraft=computed(()=>modal.value==='character'?draftCharacter.value:modal.value==='relation'?draftRelation.value:modal.value==='project'?draftProject.value:null)
+  const displaySaveStatus=computed(()=>saveStatus.value==='保存失败'||recoveryBlocked.value?saveStatus.value:activeDraft.value&&JSON.stringify(activeDraft.value)!==draftBaseline.value?'编辑中，尚未提交':saveStatus.value)
+  function rememberPositions(positions:NodePositions){
+    if(!ready.value||recoveryBlocked.value)return
+    if(JSON.stringify(localPositions.value)===JSON.stringify(positions))return
+    library.value.localLayouts ||= Object.create(null)
+    library.value.localLayouts![library.value.activeId]=positions
+    ++saveNumber;saveStatus.value='有修改，等待保存';clearTimeout(layoutSaveTimer)
+    layoutSaveTimer=setTimeout(()=>{layoutSaveTimer=undefined;void persist().catch(()=>{})},350)
+  }
   const layoutDensity=computed({get:()=>parseLayoutDensity(library.value.layoutDensity),set:(value:number)=>{library.value.layoutDensity=parseLayoutDensity(value);void persist().catch(()=>{})}})
   const groups=computed(()=>[...new Set(data.value.characters.flatMap(c=>characterGroups(c).length?characterGroups(c):['未分组']))])
   const sortedCharacters=computed(()=>sortCharacters(data.value.characters))
@@ -53,20 +68,22 @@ export function useWorkspace() {
   function syncCurrent(){const entry=library.value.graphs.find(s=>s.id===library.value.activeId);if(entry){entry.data=clone(data.value);entry.updatedAt=new Date().toISOString()}}
   async function persist(showToast=false){
     if(!ready.value||recoveryBlocked.value)return
+    clearTimeout(layoutSaveTimer);layoutSaveTimer=undefined;
+    if(graph.value?.storyId()===library.value.activeId){library.value.localLayouts ||= Object.create(null);library.value.localLayouts![library.value.activeId]=graph.value.positions()}
     syncCurrent();const number=++saveNumber;pendingSaves++;saveStatus.value='保存中…'
     try{await saveWorkspace(clone(library.value));if(number===saveNumber)saveStatus.value='已自动保存';if(showToast)notify('整个关系网书架已保存到本机')}
-    catch(e){saveStatus.value='保存失败';notify(`保存失败：${errorMessage(e)}`,true);throw e}finally{pendingSaves--}
+    catch(e){if(number===saveNumber)saveStatus.value='保存失败';notify(`保存失败：${errorMessage(e)}`,true);throw e}finally{pendingSaves--}
   }
   function commit(next:Atlas){undoStack.value.push(clone(data.value));if(undoStack.value.length>30)undoStack.value.shift();redoStack.value=[];data.value=next;recoveryBlocked.value=false;cleanSelection();void persist().catch(()=>{})}
   function undo(){const prior=undoStack.value.pop();if(!prior)return;redoStack.value.push(clone(data.value));data.value=prior;cleanSelection();void persist().catch(()=>{})}
   function redo(){const next=redoStack.value.pop();if(!next)return;undoStack.value.push(clone(data.value));data.value=next;cleanSelection();void persist().catch(()=>{})}
   function cleanSelection(){if(selectedKind.value==='character'&&!character.value||selectedKind.value==='relation'&&!relation.value){selectedKind.value='none';selectedId.value=''}if(group.value&&!groups.value.includes(group.value))group.value='';if(floatingId.value&&!floatingCharacter.value)closeFloating()}
   function select(kind:'character'|'relation'|'none',id:string,focus=false){selectedKind.value=kind;selectedId.value=id;if(kind!=='none')inspector.value=true;if(focus)graph.value?.focus(id)}
-  function openModal(kind:string){formError.value='';closeFloating();modal.value=kind}
-  function editCharacter(c?:Character){isEditing.value=!!c;draftCharacter.value={id:c?.id||uid('character'),name:c?.name||'',groups:c?characterGroups(c):group.value&&group.value!=='未分组'?[group.value]:[],color:c?.color||palette[groups.value.length%palette.length]!,notes:c?.notes||'',tags:c?.tags?.join(' ')||'',initialTo:'',initialLabel:'朋友',initialDirection:'two-way'};openModal('character')}
+  function openModal(kind:string){formError.value='';closeFloating();modal.value=kind;draftBaseline.value=JSON.stringify(activeDraft.value)}
+  function editCharacter(c?:Character){isEditing.value=!!c;draftCharacter.value={id:c?.id||uid('character'),name:c?.name||'',groups:c?characterGroups(c):group.value&&group.value!=='未分组'?[group.value]:[],color:c?.color||palette[groups.value.length%palette.length]!,avatar:c?.avatar||'',notes:c?.notes||'',tags:c?.tags?.join(' ')||'',initialTo:'',initialLabel:'朋友',initialDirection:'two-way'};openModal('character')}
   function submitCharacter(){try{
     const d=draftCharacter.value,existing=data.value.characters.find(c=>c.id===d.id)
-    const c:Character={...existing,id:d.id,name:d.name.trim(),groups:[...d.groups],color:d.color,notes:d.notes,tags:splitTags(d.tags)}
+    const c:Character={...existing,id:d.id,name:d.name.trim(),groups:[...d.groups],color:d.color,avatar:d.avatar,notes:d.notes,tags:splitTags(d.tags)}
     if(!c.name)throw new Error('请填写角色名称。')
     let next=isEditing.value?{...data.value,characters:data.value.characters.map(old=>old.id===c.id?c:old)}:addCharacter(data.value,c)
     if(!isEditing.value&&d.initialTo){if(!d.initialLabel.trim())throw new Error('请填写完整的初始关系。');next={...next,relations:[...next.relations,{id:uid('relation'),...initialRelation(c.id,d.initialTo,d.initialDirection),label:d.initialLabel.trim()}]}}
@@ -77,7 +94,7 @@ export function useWorkspace() {
   function askConfirmation(title:string,description:string,action:()=>void,destructive=false){confirmation.value={title,description,action,destructive};openModal('confirm')}
   function deleteCharacter(c:Character){askConfirmation(`删除「${c.name}」？`,`同时移除与该角色有关的 ${linked.value.length} 条关系。此操作可以撤销。`,()=>{commit(removeCharacter(data.value,c.id));select('none','');modal.value='';notify('角色已删除，可撤销恢复')},true)}
   function deleteRelation(r:Relation){askConfirmation('删除这条关系？',`${name(r.from)} ↔ ${name(r.to)} · ${relationLabel(r)}。此操作可以撤销。`,()=>{commit({...data.value,relations:data.value.relations.filter(old=>old.id!==r.id)});select('none','');modal.value=''},true)}
-  function activate(id:string){syncCurrent();const entry=library.value.graphs.find(s=>s.id===id);if(!entry)return;library.value.activeId=id;data.value=clone(entry.data);query.value='';group.value='';undoStack.value=[];redoStack.value=[];closeFloating();select('none','');inspector.value=false;modal.value='';void persist().catch(()=>{})}
+  function activate(id:string){clearTimeout(layoutSaveTimer);layoutSaveTimer=undefined;if(graph.value?.storyId()===library.value.activeId){library.value.localLayouts ||= Object.create(null);library.value.localLayouts![library.value.activeId]=graph.value.positions()}syncCurrent();const entry=library.value.graphs.find(s=>s.id===id);if(!entry)return;library.value.activeId=id;data.value=clone(entry.data);query.value='';group.value='';undoStack.value=[];redoStack.value=[];closeFloating();select('none','');inspector.value=false;modal.value='';void persist().catch(()=>{})}
   function addStory(atlas:Atlas){if(library.value.graphs.length>=1000)throw new Error('书架最多保存 1,000 张关系网。');syncCurrent();const entry=story(atlas);library.value.graphs.push(entry);activate(entry.id)}
   function newProject(){creatingProject.value=true;draftProject.value={title:''};openModal('project')}
   function editProject(){creatingProject.value=false;draftProject.value={title:data.value.title};openModal('project')}
@@ -90,18 +107,18 @@ export function useWorkspace() {
   async function readJson(event:Event){const input=event.target as HTMLInputElement,file=input.files?.[0];input.value='';if(!file)return;try{if(file.size>128*1024*1024)throw new Error('文件不能超过 128 MB。');previewImport(JSON.parse((await file.text()).replace(/^\uFEFF/,'')))}catch(e){notify(`导入失败：${errorMessage(e)}`,true)}}
   function confirmImport(){try{const pending=pendingImport.value;if(!pending)return;if(pending.library){if(library.value.graphs.length+pending.library.graphs.length>1000)throw new Error('导入后超过 1,000 张关系网。');syncCurrent();const entries=pending.library.graphs.map(s=>story(s.data));library.value.graphs.push(...entries);library.value.customColors=parseColorHistory([...(library.value.customColors||[]),...(pending.library.customColors||[])]);activate(entries[0]!.id)}else addStory(pending.data);pendingImport.value=null;modal.value='';notify('已作为新关系网加入书架，原有关系网保留')}catch(e){formError.value=errorMessage(e)}}
   function downloadBlob(blob:Blob,filename:string){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000)}
-  async function exportJson(all=false){try{syncCurrent();const payload=all?clone(library.value):clone(data.value);if(window.desktop){if(await window.desktop.exportJson(payload))notify('JSON 已导出')}else{downloadBlob(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),`${all?'织灵-完整书架':data.value.title.replace(/[<>:"/\\|?*]/g,'_')}.json`);notify('JSON 已导出')}}catch(e){notify(`导出失败：${errorMessage(e)}`,true)}}
+  async function exportJson(all=false){try{syncCurrent();const payload=all?clone(exportLibrary(library.value)):clone(data.value);if(window.desktop){if(await window.desktop.exportJson(payload))notify('JSON 已导出')}else{downloadBlob(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),`${all?'织灵-完整书架':data.value.title.replace(/[<>:"/\\|?*]/g,'_')}.json`);notify('JSON 已导出')}}catch(e){notify(`导出失败：${errorMessage(e)}`,true)}}
   const exporting=ref(false)
   async function exportImage(){if(exporting.value)return;exporting.value=true;try{const blob=await graph.value?.exportImage();if(!blob)throw new Error('关系网尚未就绪。');if(window.desktop?.exportImage){if(await window.desktop.exportImage(await blob.arrayBuffer(),data.value.title))notify('整张关系网已导出为 PNG')}else{downloadBlob(blob,`${data.value.title.replace(/[<>:"/\\|?*]/g,'_')}-完整关系网.png`);notify('完整关系网 PNG 已导出（包含筛选外的角色）')}}catch(e){notify(`图片导出失败：${errorMessage(e)}`,true)}finally{exporting.value=false}}
   function keydown(e:KeyboardEvent){if(e.key==='Escape'){modal.value='';return}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();void persist(true).catch(()=>{});return}const editing=(e.target as HTMLElement)?.matches('input,textarea,select,[contenteditable]');if(!editing&&!modal.value&&(e.ctrlKey||e.metaKey)){if(e.key.toLowerCase()==='z'){e.preventDefault();e.shiftKey?redo():undo()}if(e.key.toLowerCase()==='y'){e.preventDefault();redo()}}}
-  function beforeUnload(e:BeforeUnloadEvent){if(pendingSaves||saveStatus.value==='保存失败'){e.preventDefault();e.returnValue=''}}
+  function beforeUnload(e:BeforeUnloadEvent){if(pendingSaves||layoutSaveTimer||saveStatus.value==='保存失败'||displaySaveStatus.value==='编辑中，尚未提交'){e.preventDefault();e.returnValue=''}}
   watch(modal,value=>{if(value)setTimeout(()=>(document.querySelector<HTMLElement>('.modal input:not([type=file])')||document.querySelector<HTMLElement>('.modal button'))?.focus(),50)})
   function trapFocus(e:KeyboardEvent){if(e.key!=='Tab')return;const elements=[...(e.currentTarget as HTMLElement).querySelectorAll<HTMLElement>('button:not(:disabled),input:not([type=file]),textarea,select,[tabindex="0"]')].filter(el=>el.offsetParent!==null),first=elements[0],last=elements.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus()}}
   onMounted(async()=>{
     document.addEventListener('keydown',keydown);window.addEventListener('beforeunload',beforeUnload)
     try{
       const result=await loadWorkspace();storageLabel.value=storageDescription()
-      if(result.data)library.value=parseLibrary(result.data)
+      if(result.data)library.value=parseLibrary(result.data,true)
       // Migration remains in the user's own app; the original v1 browser value is not removed.
       const legacy=localStorage.getItem('novel-atlas-v1')
       if(legacy&&!localStorage.getItem('zhiling-v1-migrated')){
@@ -115,6 +132,6 @@ export function useWorkspace() {
       ready.value=true;await persist();if(legacy)localStorage.setItem('zhiling-v1-migrated','true')
     }catch(e){ready.value=true;recoveryBlocked.value=true;saveStatus.value='需要恢复数据';notify(`本地书架未覆盖：${errorMessage(e)}`,true)}
   })
-  onBeforeUnmount(()=>{document.removeEventListener('keydown',keydown);window.removeEventListener('beforeunload',beforeUnload);clearTimeout(toastTimer);clearTimeout(hideTimer)})
-  return {layoutDensity,sortedCharacters,characterGroups,library,data,ready,recoveryBlocked,saveStatus,storageLabel,query,group,selectedId,selectedKind,labels,neighborhood,layout,inspector,zoom,graph,modal,formError,toast,toastError,jsonInput,draftCharacter,draftRelation,draftProject,creatingProject,bookQuery,books,isEditing,pendingImport,undoStack,redoStack,confirmation,theme,themes,groups,characters,character,relation,linked,selection,connectedPeople,name,relationLabel,relationFrom,hoverId,floatingId,pinnedId,floatQuery,floatingCharacter,floatingRows,enterCharacter,leaveCharacter,holdFloating,releaseFloating,pinCharacter,closeFloating,persist,undo,redo,select,openModal,editCharacter,submitCharacter,editRelation,submitRelation,deleteCharacter,deleteRelation,activate,newProject,editProject,submitProject,deleteStory,changeTheme,importJson,readJson,confirmImport,exportJson,exportImage,exporting,trapFocus,palette}
+  onBeforeUnmount(()=>{document.removeEventListener('keydown',keydown);window.removeEventListener('beforeunload',beforeUnload);clearTimeout(toastTimer);clearTimeout(hideTimer);clearTimeout(layoutSaveTimer)})
+  return {nodeSize,localPositions,rememberPositions,displaySaveStatus,layoutDensity,sortedCharacters,characterGroups,library,data,ready,recoveryBlocked,saveStatus,storageLabel,query,group,selectedId,selectedKind,labels,neighborhood,layout,inspector,zoom,graph,modal,formError,toast,toastError,jsonInput,draftCharacter,draftRelation,draftProject,creatingProject,bookQuery,books,isEditing,pendingImport,undoStack,redoStack,confirmation,theme,themes,groups,characters,character,relation,linked,selection,connectedPeople,name,relationLabel,relationFrom,hoverId,floatingId,pinnedId,floatQuery,floatingCharacter,floatingRows,enterCharacter,leaveCharacter,holdFloating,releaseFloating,pinCharacter,closeFloating,persist,undo,redo,select,openModal,editCharacter,submitCharacter,editRelation,submitRelation,deleteCharacter,deleteRelation,activate,newProject,editProject,submitProject,deleteStory,changeTheme,importJson,readJson,confirmImport,exportJson,exportImage,exporting,trapFocus,palette}
 }

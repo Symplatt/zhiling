@@ -12,6 +12,7 @@
 - Electron 最终应用实测真实系统目录导出：PNG 含头像，导出前后节点位置、平移及缩放不变；JSON 和 PNG 分目录；自动导出不触发保存弹窗，同名 JSON 自动编号；询问模式使用指定默认目录并可取消。
 - Electron 原生窗口 `isFullScreen()` 进入/退出均正确，纯图谱样式与原生状态同步；120 张关系网真实落盘与恢复通过。
 - 新增设置界面截图检查后修正复选框同行左对齐，并通过浏览器计算样式复核。
+- 最终包的一次后台 PNG 导出测试超过原 10 秒等待窗口；将测试等待延长到 20 秒并增加失败界面采集后，原安装包完整回归通过，没有绕过 PNG 内容或位置断言。
 - 最终交付包测试记录：`test-results/v211-desktop-delivery/result.json`。打包内 Electron 入口、预加载脚本、导出模块及页面与当前源码匹配，未包含 data、test-results 或 Git 目录。
 - D 盘 Windows x64 NSIS 安装包 123748456 字节，SHA-256：`0e6dddc03f235438250f46dab160f24dabbfc9167c9e1e9d744def5b26fa7bf8`；TXT 使用 UTF-8 BOM 与 Windows 换行。安装包与用于发布的英文名附件校验一致。
 

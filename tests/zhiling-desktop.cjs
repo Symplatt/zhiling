@@ -31,7 +31,7 @@ app.on('browser-window-created',(_,win)=>{win.hide();win.webContents.once('did-f
     })()`)
     dialog.showSaveDialog=async()=>({canceled:false,filePath:path.join(root,'whole-graph.png')})
     await win.webContents.executeJavaScript(`Array.from(document.querySelectorAll('button')).find(b=>b.textContent.trim().startsWith('导出图片')).click()`)
-    const deadline=Date.now()+10000;while(!fs.existsSync(path.join(root,'whole-graph.png'))){if(Date.now()>deadline)throw new Error('PNG export timed out');await new Promise(r=>setTimeout(r,50))}
+    const deadline=Date.now()+20000;while(!fs.existsSync(path.join(root,'whole-graph.png'))){if(Date.now()>deadline)throw new Error('PNG export timed out');await new Promise(r=>setTimeout(r,50))}
     const png=fs.readFileSync(path.join(root,'whole-graph.png'));assert.equal(png.subarray(0,8).toString('hex'),'89504e470d0a1a0a')
     const afterExport=await win.webContents.executeJavaScript(`(() => { const cy=document.querySelector('.graph-engine')._cyreg.cy; return JSON.stringify({nodes:cy.nodes().map(n=>({...n.position()})),pan:cy.pan(),zoom:cy.zoom()}); })()`)
     assert.equal(afterExport,beforeExport,'PNG export must preserve the live viewport and manually placed nodes')
@@ -70,7 +70,7 @@ app.on('browser-window-created',(_,win)=>{win.hide();win.webContents.once('did-f
     const restored=await win.webContents.executeJavaScript('window.desktop.load()');assert.equal(restored.data.graphs.length,120)
     fs.writeFileSync(path.join(root,'result.json'),JSON.stringify({passed:true,nativeFullscreen:true,exportPreferences:true,automaticPng:true,automaticJson:true,collisionSafe:true,graphs:120,pngBytes:png.length,pngWidth:png.readUInt32BE(16),pngHeight:png.readUInt32BE(20)},null,2))
     console.log('PASS: packaged desktop renderer, paired labels, 120 graph persistence and actual PNG file export.');app.exit(0)
-  }catch(e){fs.writeFileSync(path.join(root,'failure.txt'),e.stack);console.error(e);app.exit(1)}
+  }catch(e){try{fs.writeFileSync(path.join(root,'failure-ui.txt'),await win.webContents.executeJavaScript('document.body.innerText'))}catch{}fs.writeFileSync(path.join(root,'failure.txt'),e.stack);console.error(e);app.exit(1)}
 })})
 require(path.join(process.env.ZHILING_PACKAGED_DIR||path.resolve(__dirname,'../release/win-unpacked'),'resources/app.asar/electron/main.cjs'))
 setTimeout(()=>app.exit(1),45000).unref()

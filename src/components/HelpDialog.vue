@@ -40,9 +40,14 @@ const { modal } = useWorkspaceContext();
       从左侧打开关系网书架，可独立保存 1,000
       张关系网。悬停角色可查看所有关系；点击悬浮窗口右上角图钉可固定窗口。导出图片始终包含整张关系网。
     </p>
-    <div class="modal-actions">
+    <div class="modal-actions help-footer">
+      <p class="help-author">© 2026 Symplatt 版权所有</p>
       <button class="primary-button" @click="modal = ''">开始创作</button>
     </div>
-    <p class="help-author">© 2026 Symplatt 版权所有</p>
   </div>
 </template>
+
+<style scoped>
+.help-footer { justify-content: space-between; align-items: flex-end; gap: 16px; }
+.help-footer .help-author { margin: 0; }
+</style>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { provideWorkspace } from "./workspaceContext";
-const { inspector, jsonInput, readJson } = provideWorkspace();
+const { fullscreen, inspector, jsonInput, readJson } = provideWorkspace();
 import WorkspaceDialogs from "./components/WorkspaceDialogs.vue";
 import AppHeader from "./components/AppHeader.vue";
 import WorkspaceSidebar from "./components/WorkspaceSidebar.vue";
@@ -10,21 +10,21 @@ import WorkspaceStatus from "./components/WorkspaceStatus.vue";
 import WorkspaceToast from "./components/WorkspaceToast.vue";
 </script>
 <template>
-  <div class="app-shell">
-    <AppHeader />
+  <div class="app-shell" :class="{ 'graph-fullscreen': fullscreen }">
+    <AppHeader v-show="!fullscreen" />
     <div class="workspace">
-      <WorkspaceSidebar />
+      <WorkspaceSidebar v-show="!fullscreen" />
 
       <main class="main-area">
         <div class="graph-body">
           <GraphCanvas />
-          <SelectionInspector v-if="inspector" />
+          <SelectionInspector v-if="inspector && !fullscreen" />
         </div>
-        <WorkspaceStatus />
+        <WorkspaceStatus v-show="!fullscreen" />
       </main>
     </div>
 
-    <WorkspaceToast />
+    <WorkspaceToast v-show="!fullscreen" />
     <input
       :ref="(element) => (jsonInput = element as HTMLInputElement | undefined)"
       type="file"
@@ -36,3 +36,8 @@ import WorkspaceToast from "./components/WorkspaceToast.vue";
     <WorkspaceDialogs />
   </div>
 </template>
+
+<style>
+.graph-fullscreen .canvas-controls, .graph-fullscreen .canvas-caption, .graph-fullscreen .graph-empty { display: none; }
+.graph-fullscreen.app-shell { height: 100dvh; border: 0; border-radius: 0; }
+</style>

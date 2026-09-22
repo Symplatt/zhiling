@@ -8,6 +8,7 @@ import {
   Focus,
   Link2,
   Pencil,
+  Pin,
   Plus,
   Trash2,
   X,
@@ -16,7 +17,9 @@ import { useWorkspaceContext } from "../workspaceContext";
 import SelfReference from "./SelfReference.vue";
 const {
   neighborhood,
-  inspector,
+  inspectorPinned,
+  toggleInspectorPin,
+  closeInspector,
   character,
   relation,
   linked,
@@ -45,10 +48,13 @@ const {
         >
           <Pencil :size="13" />编辑档案
         </button>
+        <button v-if="character || relation" class="icon-button small" :class="{ 'focus-active': inspectorPinned }"
+          :aria-label="inspectorPinned ? '取消固定档案' : '固定档案'" :title="inspectorPinned ? '取消固定档案' : '固定当前档案，选择其他角色时保留'"
+          :aria-pressed="inspectorPinned" @click="toggleInspectorPin"><Pin :size="15" /></button>
         <button
           class="icon-button small"
           aria-label="关闭详情"
-          @click="inspector = false"
+          @click="closeInspector"
         >
           <X :size="15" />
         </button>
@@ -179,7 +185,7 @@ const {
         <button
           class="text-button"
           :class="{ 'focus-active': neighborhood }"
-          @click="neighborhood = !neighborhood"
+          @click="select('character', character.id); neighborhood = !neighborhood"
         >
           <Focus :size="15" />{{
             neighborhood ? "显示全部关系" : "聚焦一度关系"

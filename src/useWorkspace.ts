@@ -7,6 +7,8 @@ import { loadWorkspace, saveWorkspace, storageDescription } from './storage'
 import { parseColorHistory } from './colors'
 import { characterGroups, belongsToGroup, sortCharacters, initialRelation, type InitialDirection } from './characters'
 import { parseLayoutDensity } from './layoutDensity'
+import { exportBrowserFile, prepareBrowserFile } from './exportSettings'
+import { useFullscreen } from './useFullscreen'
 import type { NodePositions } from './localLayout'
 
 export function useWorkspace() {
@@ -17,7 +19,7 @@ export function useWorkspace() {
   const graph=ref<InstanceType<typeof RelationshipGraph>>(),modal=ref(''),formError=ref(''),toast=ref(''),toastError=ref(false),jsonInput=ref<HTMLInputElement>()
   const draftCharacter=ref({id:'',name:'',groups:[] as string[],color:palette[0]!,avatar:'',notes:'',tags:'',initialTo:'',initialLabel:'朋友',initialDirection:'two-way' as InitialDirection})
   const draftRelation=ref({id:'',from:'',to:'',label:'',direction:'one-way' as 'one-way'|'two-way',description:''})
-  const draftProject=ref({title:''}),creatingProject=ref(false),bookQuery=ref('')
+  const draftProject=ref({title:'',copyFrom:''}),creatingProject=ref(false),bookQuery=ref('')
   const isEditing=ref(false),pendingImport=ref<{data:Atlas;warnings:string[];library?:Library}|null>(null)
   const undoStack=ref<Atlas[]>([]),redoStack=ref<Atlas[]>([])
   const confirmation=ref<{title:string;description:string;action:()=>void;destructive:boolean}|null>(null)
@@ -42,8 +44,9 @@ export function useWorkspace() {
   const sortedCharacters=computed(()=>sortCharacters(data.value.characters))
   const characters=computed(()=>data.value.characters.filter(c=>belongsToGroup(c,group.value)&&`${c.name} ${c.id} ${characterGroups(c).join(' ')} ${c.tags?.join(' ')}`.toLowerCase().includes(query.value.toLowerCase())))
   const books=computed(()=>library.value.graphs.filter(s=>s.data.title.toLowerCase().includes(bookQuery.value.toLowerCase())))
-  const character=computed(()=>selectedKind.value==='character'?data.value.characters.find(c=>c.id===selectedId.value):undefined)
-  const relation=computed(()=>selectedKind.value==='relation'?data.value.relations.find(r=>r.id===selectedId.value):undefined)
+  const inspectorPinned=ref(false),inspectedId=ref(''),inspectedKind=ref<'character'|'relation'|'none'>('none')
+  const character=computed(()=>inspectedKind.value==='character'?data.value.characters.find(c=>c.id===inspectedId.value):undefined)
+  const relation=computed(()=>inspectedKind.value==='relation'?data.value.relations.find(r=>r.id===inspectedId.value):undefined)
   const linked=computed(()=>character.value?data.value.relations.filter(r=>r.from===character.value!.id||r.to===character.value!.id):[])
   const selection=computed(()=>selectedKind.value==='none'?'':`${selectedKind.value==='character'?'c':'r'}:${selectedId.value}`)
   const connectedPeople=computed(()=>new Set(linked.value.flatMap(r=>[r.from,r.to]).filter(id=>id!==character.value?.id)).size)
@@ -77,8 +80,21 @@ export function useWorkspace() {
   function commit(next:Atlas){undoStack.value.push(clone(data.value));if(undoStack.value.length>30)undoStack.value.shift();redoStack.value=[];data.value=next;recoveryBlocked.value=false;cleanSelection();void persist().catch(()=>{})}
   function undo(){const prior=undoStack.value.pop();if(!prior)return;redoStack.value.push(clone(data.value));data.value=prior;cleanSelection();void persist().catch(()=>{})}
   function redo(){const next=redoStack.value.pop();if(!next)return;undoStack.value.push(clone(data.value));data.value=next;cleanSelection();void persist().catch(()=>{})}
-  function cleanSelection(){if(selectedKind.value==='character'&&!character.value||selectedKind.value==='relation'&&!relation.value){selectedKind.value='none';selectedId.value=''}if(group.value&&!groups.value.includes(group.value))group.value='';if(floatingId.value&&!floatingCharacter.value)closeFloating()}
-  function select(kind:'character'|'relation'|'none',id:string,focus=false){selectedKind.value=kind;selectedId.value=id;if(kind!=='none')inspector.value=true;if(focus)graph.value?.focus(id)}
+  watch(inspector,value=>{if(!value)inspectorPinned.value=false})
+  function closeInspector(){inspector.value=false;inspectorPinned.value=false}
+  function cleanSelection(){
+    if(selectedKind.value==='character'&&!data.value.characters.some(c=>c.id===selectedId.value)||selectedKind.value==='relation'&&!data.value.relations.some(r=>r.id===selectedId.value)){selectedKind.value='none';selectedId.value=''}
+    if(inspectedKind.value==='character'&&!character.value||inspectedKind.value==='relation'&&!relation.value){inspectorPinned.value=false;inspectedKind.value='none';inspectedId.value=''}
+    if(group.value&&!groups.value.includes(group.value))group.value=''
+    if(floatingId.value&&!floatingCharacter.value)closeFloating()
+  }
+  function select(kind:'character'|'relation'|'none',id:string,focus=false){
+    selectedKind.value=kind;selectedId.value=id
+    if(!inspectorPinned.value){inspectedKind.value=kind;inspectedId.value=id;if(kind!=='none')inspector.value=true}
+    if(focus)graph.value?.focus(id)
+  }
+  function toggleInspectorPin(){inspectorPinned.value=!inspectorPinned.value;if(!inspectorPinned.value){inspectedKind.value=selectedKind.value;inspectedId.value=selectedId.value}}
+  const {fullscreen,toggleFullscreen}=useFullscreen(notify)
   function openModal(kind:string){formError.value='';closeFloating();modal.value=kind;draftBaseline.value=JSON.stringify(activeDraft.value)}
   function editCharacter(c?:Character){isEditing.value=!!c;draftCharacter.value={id:c?.id||uid('character'),name:c?.name||'',groups:c?characterGroups(c):group.value&&group.value!=='未分组'?[group.value]:[],color:c?.color||palette[groups.value.length%palette.length]!,avatar:c?.avatar||'',notes:c?.notes||'',tags:c?.tags?.join(' ')||'',initialTo:'',initialLabel:'朋友',initialDirection:'two-way'};openModal('character')}
   function submitCharacter(){try{
@@ -94,11 +110,32 @@ export function useWorkspace() {
   function askConfirmation(title:string,description:string,action:()=>void,destructive=false){confirmation.value={title,description,action,destructive};openModal('confirm')}
   function deleteCharacter(c:Character){askConfirmation(`删除「${c.name}」？`,`同时移除与该角色有关的 ${linked.value.length} 条关系。此操作可以撤销。`,()=>{commit(removeCharacter(data.value,c.id));select('none','');modal.value='';notify('角色已删除，可撤销恢复')},true)}
   function deleteRelation(r:Relation){askConfirmation('删除这条关系？',`${name(r.from)} ↔ ${name(r.to)} · ${relationLabel(r)}。此操作可以撤销。`,()=>{commit({...data.value,relations:data.value.relations.filter(old=>old.id!==r.id)});select('none','');modal.value=''},true)}
-  function activate(id:string){clearTimeout(layoutSaveTimer);layoutSaveTimer=undefined;if(graph.value?.storyId()===library.value.activeId){library.value.localLayouts ||= Object.create(null);library.value.localLayouts![library.value.activeId]=graph.value.positions()}syncCurrent();const entry=library.value.graphs.find(s=>s.id===id);if(!entry)return;library.value.activeId=id;data.value=clone(entry.data);query.value='';group.value='';undoStack.value=[];redoStack.value=[];closeFloating();select('none','');inspector.value=false;modal.value='';void persist().catch(()=>{})}
+  function activate(id:string){clearTimeout(layoutSaveTimer);layoutSaveTimer=undefined;if(graph.value?.storyId()===library.value.activeId){library.value.localLayouts ||= Object.create(null);library.value.localLayouts![library.value.activeId]=graph.value.positions()}syncCurrent();const entry=library.value.graphs.find(s=>s.id===id);if(!entry)return;library.value.activeId=id;data.value=clone(entry.data);query.value='';group.value='';undoStack.value=[];redoStack.value=[];closeFloating();closeInspector();select('none','');modal.value='';void persist().catch(()=>{})}
   function addStory(atlas:Atlas){if(library.value.graphs.length>=1000)throw new Error('书架最多保存 1,000 张关系网。');syncCurrent();const entry=story(atlas);library.value.graphs.push(entry);activate(entry.id)}
-  function newProject(){creatingProject.value=true;draftProject.value={title:''};openModal('project')}
-  function editProject(){creatingProject.value=false;draftProject.value={title:data.value.title};openModal('project')}
-  function submitProject(){try{if(!draftProject.value.title.trim())throw new Error('请填写关系网名称。');const values={title:draftProject.value.title.trim()};if(creatingProject.value)addStory({version:1,...values,characters:[],relations:[]});else commit({...data.value,...values});modal.value='';notify(creatingProject.value?'新关系网已加入书架':'关系网信息已保存')}catch(e){formError.value=errorMessage(e)}}
+  function newProject(){creatingProject.value=true;draftProject.value={title:'',copyFrom:''};openModal('project')}
+  function editProject(){creatingProject.value=false;draftProject.value={title:data.value.title,copyFrom:''};openModal('project')}
+  function chooseCopySource(){
+    const source=library.value.graphs.find(s=>s.id===draftProject.value.copyFrom)
+    draftProject.value.title=source?`${source.id===library.value.activeId?data.value.title:source.data.title}-副本`.slice(0,80):''
+  }
+  function submitProject(){try{
+    const title=draftProject.value.title.trim()
+    if(!title)throw new Error('请填写关系网名称。')
+    if(creatingProject.value){
+      const source=library.value.graphs.find(s=>s.id===draftProject.value.copyFrom)
+      if(draftProject.value.copyFrom&&!source)throw new Error('要复制的关系网已不存在。')
+      if(source){
+        if(library.value.graphs.length>=1000)throw new Error('书架最多保存 1,000 张关系网。')
+        syncCurrent()
+        const entry=story({...clone(source.data),title})
+        const positions=source.id===library.value.activeId?graph.value?.positions():library.value.localLayouts?.[source.id]
+        library.value.graphs.push(entry)
+        if(positions){library.value.localLayouts ||= Object.create(null);library.value.localLayouts![entry.id]=clone(positions)}
+        activate(entry.id)
+      }else addStory({version:1,title,characters:[],relations:[]})
+    }else commit({...data.value,title})
+    modal.value='';notify(creatingProject.value?'新关系网已加入书架':'关系网信息已保存')
+  }catch(e){formError.value=errorMessage(e)}}
   function deleteStory(id:string){const entry=library.value.graphs.find(s=>s.id===id);if(!entry)return;askConfirmation(`删除关系网「${entry.data.title}」？`,'这将从本机书架移除整张关系网，建议先导出 JSON 备份。',()=>{library.value.graphs=library.value.graphs.filter(s=>s.id!==id);if(!library.value.graphs.length)library.value.graphs.push(story({version:1,title:'新的故事',characters:[],relations:[]}));if(library.value.activeId===id)activate(library.value.graphs[0]!.id);else{modal.value='library';void persist().catch(()=>{})}},true)}
   function changeTheme(value:Theme){library.value.theme=value;void persist().catch(()=>{})}
   watch(theme,value=>{document.documentElement.dataset.theme=value},{immediate:true})
@@ -107,9 +144,20 @@ export function useWorkspace() {
   async function readJson(event:Event){const input=event.target as HTMLInputElement,file=input.files?.[0];input.value='';if(!file)return;try{if(file.size>128*1024*1024)throw new Error('文件不能超过 128 MB。');previewImport(JSON.parse((await file.text()).replace(/^\uFEFF/,'')))}catch(e){notify(`导入失败：${errorMessage(e)}`,true)}}
   function confirmImport(){try{const pending=pendingImport.value;if(!pending)return;if(pending.library){if(library.value.graphs.length+pending.library.graphs.length>1000)throw new Error('导入后超过 1,000 张关系网。');syncCurrent();const entries=pending.library.graphs.map(s=>story(s.data));library.value.graphs.push(...entries);library.value.customColors=parseColorHistory([...(library.value.customColors||[]),...(pending.library.customColors||[])]);activate(entries[0]!.id)}else addStory(pending.data);pendingImport.value=null;modal.value='';notify('已作为新关系网加入书架，原有关系网保留')}catch(e){formError.value=errorMessage(e)}}
   function downloadBlob(blob:Blob,filename:string){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000)}
-  async function exportJson(all=false){try{syncCurrent();const payload=all?clone(exportLibrary(library.value)):clone(data.value);if(window.desktop){if(await window.desktop.exportJson(payload))notify('JSON 已导出')}else{downloadBlob(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),`${all?'织灵-完整书架':data.value.title.replace(/[<>:"/\\|?*]/g,'_')}.json`);notify('JSON 已导出')}}catch(e){notify(`导出失败：${errorMessage(e)}`,true)}}
+  async function exportJson(all=false){try{syncCurrent();const payload=all?clone(exportLibrary(library.value)):clone(data.value);if(window.desktop){if(await window.desktop.exportJson(payload))notify('JSON 已导出')}else{await exportBrowserFile('json',new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),`${all?'织灵-完整书架':data.value.title.replace(/[<>:"/\\|?*]/g,'_')}.json`,downloadBlob);notify('JSON 已导出')}}catch(e){if((e as DOMException).name==='AbortError')return;notify(`导出失败：${errorMessage(e)}`,true)}}
   const exporting=ref(false)
-  async function exportImage(){if(exporting.value)return;exporting.value=true;try{const blob=await graph.value?.exportImage();if(!blob)throw new Error('关系网尚未就绪。');if(window.desktop?.exportImage){if(await window.desktop.exportImage(await blob.arrayBuffer(),data.value.title))notify('整张关系网已导出为 PNG')}else{downloadBlob(blob,`${data.value.title.replace(/[<>:"/\\|?*]/g,'_')}-完整关系网.png`);notify('完整关系网 PNG 已导出（包含筛选外的角色）')}}catch(e){notify(`图片导出失败：${errorMessage(e)}`,true)}finally{exporting.value=false}}
+  async function exportImage(){
+    if(exporting.value)return
+    exporting.value=true
+    try{
+      const write=window.desktop?undefined:await prepareBrowserFile('png',`${data.value.title.replace(/[<>:"/\\|?*]/g,'_')}-完整关系网.png`,downloadBlob)
+      const blob=await graph.value?.exportImage()
+      if(!blob)throw new Error('关系网尚未就绪。')
+      if(window.desktop){if(await window.desktop.exportImage(await blob.arrayBuffer(),data.value.title))notify('整张关系网已导出为 PNG')}
+      else{await write!(blob);notify('完整关系网 PNG 已导出（包含筛选外的角色）')}
+    }catch(e){if((e as DOMException).name!=='AbortError')notify(`图片导出失败：${errorMessage(e)}`,true)}
+    finally{exporting.value=false}
+  }
   function keydown(e:KeyboardEvent){if(e.key==='Escape'){modal.value='';return}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();void persist(true).catch(()=>{});return}const editing=(e.target as HTMLElement)?.matches('input,textarea,select,[contenteditable]');if(!editing&&!modal.value&&(e.ctrlKey||e.metaKey)){if(e.key.toLowerCase()==='z'){e.preventDefault();e.shiftKey?redo():undo()}if(e.key.toLowerCase()==='y'){e.preventDefault();redo()}}}
   function beforeUnload(e:BeforeUnloadEvent){if(pendingSaves||layoutSaveTimer||saveStatus.value==='保存失败'||displaySaveStatus.value==='编辑中，尚未提交'){e.preventDefault();e.returnValue=''}}
   watch(modal,value=>{if(value)setTimeout(()=>(document.querySelector<HTMLElement>('.modal input:not([type=file])')||document.querySelector<HTMLElement>('.modal button'))?.focus(),50)})
@@ -133,5 +181,5 @@ export function useWorkspace() {
     }catch(e){ready.value=true;recoveryBlocked.value=true;saveStatus.value='需要恢复数据';notify(`本地书架未覆盖：${errorMessage(e)}`,true)}
   })
   onBeforeUnmount(()=>{document.removeEventListener('keydown',keydown);window.removeEventListener('beforeunload',beforeUnload);clearTimeout(toastTimer);clearTimeout(hideTimer);clearTimeout(layoutSaveTimer)})
-  return {nodeSize,localPositions,rememberPositions,displaySaveStatus,layoutDensity,sortedCharacters,characterGroups,library,data,ready,recoveryBlocked,saveStatus,storageLabel,query,group,selectedId,selectedKind,labels,neighborhood,layout,inspector,zoom,graph,modal,formError,toast,toastError,jsonInput,draftCharacter,draftRelation,draftProject,creatingProject,bookQuery,books,isEditing,pendingImport,undoStack,redoStack,confirmation,theme,themes,groups,characters,character,relation,linked,selection,connectedPeople,name,relationLabel,relationFrom,hoverId,floatingId,pinnedId,floatQuery,floatingCharacter,floatingRows,enterCharacter,leaveCharacter,holdFloating,releaseFloating,pinCharacter,closeFloating,persist,undo,redo,select,openModal,editCharacter,submitCharacter,editRelation,submitRelation,deleteCharacter,deleteRelation,activate,newProject,editProject,submitProject,deleteStory,changeTheme,importJson,readJson,confirmImport,exportJson,exportImage,exporting,trapFocus,palette}
+  return {fullscreen,toggleFullscreen,inspectorPinned,toggleInspectorPin,closeInspector,chooseCopySource,nodeSize,localPositions,rememberPositions,displaySaveStatus,layoutDensity,sortedCharacters,characterGroups,library,data,ready,recoveryBlocked,saveStatus,storageLabel,query,group,selectedId,selectedKind,labels,neighborhood,layout,inspector,zoom,graph,modal,formError,toast,toastError,jsonInput,draftCharacter,draftRelation,draftProject,creatingProject,bookQuery,books,isEditing,pendingImport,undoStack,redoStack,confirmation,theme,themes,groups,characters,character,relation,linked,selection,connectedPeople,name,relationLabel,relationFrom,hoverId,floatingId,pinnedId,floatQuery,floatingCharacter,floatingRows,enterCharacter,leaveCharacter,holdFloating,releaseFloating,pinCharacter,closeFloating,persist,undo,redo,select,openModal,editCharacter,submitCharacter,editRelation,submitRelation,deleteCharacter,deleteRelation,activate,newProject,editProject,submitProject,deleteStory,changeTheme,importJson,readJson,confirmImport,exportJson,exportImage,exporting,trapFocus,palette}
 }

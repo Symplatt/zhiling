@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ExportSettings from './ExportSettings.vue';
 import { Check, Network } from "lucide-vue-next";
 import { densityLevels } from "../layoutDensity";
 import { useWorkspaceContext } from "../workspaceContext";
@@ -104,6 +105,7 @@ const {
         </label>
       </div>
     </fieldset>
+    <ExportSettings />
     <div class="modal-actions">
       <button class="primary-button" @click="modal = ''">完成</button>
     </div>

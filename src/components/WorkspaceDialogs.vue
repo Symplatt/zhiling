@@ -10,6 +10,7 @@ import ConfirmDialog from "./ConfirmDialog.vue";
 import HelpDialog from "./HelpDialog.vue";
 import { useWorkspaceContext } from "../workspaceContext";
 const {
+  fullscreen,
   modal,
   creatingProject,
   isEditing,
@@ -21,7 +22,7 @@ const {
 <template>
   <Teleport to="body"
     ><div
-      v-if="modal"
+      v-if="modal && !fullscreen"
       class="modal-backdrop"
       @click.self="modal = ''"
       @keydown="trapFocus"

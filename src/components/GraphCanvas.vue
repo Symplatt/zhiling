@@ -11,6 +11,7 @@ import {
 import RelationshipGraph from "./RelationshipGraph.vue";
 import { useWorkspaceContext } from "../workspaceContext";
 const {
+  toggleFullscreen,
   library,
   data,
   ready,
@@ -115,9 +116,9 @@ const {
       ><span class="vertical-divider"></span
       ><button
         class="icon-button"
-        aria-label="适应画布"
-        title="适应画布"
-        @click="graph?.fit()"
+        aria-label="全屏"
+        title="全屏（Esc 或 F11 退出）"
+        @click="toggleFullscreen"
       >
         <Maximize :size="16" />
       </button>

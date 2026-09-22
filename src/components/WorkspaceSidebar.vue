@@ -18,7 +18,8 @@ const {
   groups,
   characters,
   characterGroups,
-  character,
+  selectedId,
+  selectedKind,
   select,
   openModal,
   editCharacter,
@@ -113,7 +114,7 @@ const {
           v-for="c in characters"
           :key="c.id"
           class="character-item"
-          :class="{ active: character?.id === c.id }"
+          :class="{ active: selectedKind === 'character' && selectedId === c.id }"
           @click="select('character', c.id, true)"
         >
           <span

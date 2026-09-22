@@ -1,10 +1,16 @@
 <script setup lang="ts">
 import { useWorkspaceContext } from "../workspaceContext";
-const { modal, formError, draftProject, creatingProject, submitProject } =
+const { library, chooseCopySource, modal, formError, draftProject, creatingProject, submitProject } =
   useWorkspaceContext();
 </script>
 <template>
   <form @submit.prevent="submitProject">
+    <label v-if="creatingProject">复制已有关系网
+      <select aria-label="复制已有关系网" v-model="draftProject.copyFrom" @change="chooseCopySource">
+        <option value="">不复制，创建空白关系网</option>
+        <option v-for="entry in library.graphs" :key="entry.id" :value="entry.id">{{ entry.data.title }}</option>
+      </select>
+    </label>
     <label
       >关系网名称<input
         v-model="draftProject.title"

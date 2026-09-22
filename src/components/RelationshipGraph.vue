@@ -3,6 +3,8 @@ import cytoscape, { type Core } from "cytoscape";
 import fcose from "cytoscape-fcose";
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { graphLayoutOptions, ensureGraphSpacing, scaleGraphSpacing } from "../graph/layout";
+import { applyGraphSize } from '../graph/sizing';
+import { placeNewNodes } from '../graph/incrementalLayout';
 import { densityScale } from "../layoutDensity";
 import { graphPositions, type NodePositions } from "../localLayout";
 import { graphStyles, applyGraphTheme } from "../graph/styles";
@@ -75,9 +77,7 @@ let priorIds = "";
 function positions() { return cy ? graphPositions(cy) : {}; }
 function recordPositions() { emit('positions', positions()); }
 function applyNodeSize() {
-  const scale = densityScale(props.nodeSize);
-  cy.style().selector('node').style({ width: 76 * scale, height: 76 * scale, 'font-size': 15 * Math.sqrt(scale), 'text-max-width': `${66 * scale}px` })
-    .selector('node.has-avatar').style({ 'text-max-width': '160px' }).update();
+  applyGraphSize(cy, props.nodeSize);
 }
 function applyVisibility() {
   applyGraphVisibility(cy, props);
@@ -168,11 +168,14 @@ function sync() {
   if (firstLoad && props.data.characters.length && props.data.characters.every(c => props.positions[c.id])) {
     priorIds = ids;
     fitArrangement();
-  } else if (priorIds !== ids) {
+  } else if (firstLoad && !positions.size) {
     priorIds = ids;
     arrange();
   } else {
-    ensureSpacing();
+    const added = cy.nodes().toArray().some(n => !positions.has(n.id()));
+    placeNewNodes(cy, new Set(positions.keys()), 190 * densityScale(props.density));
+    priorIds = ids;
+    if (added) fitArrangement();
     recordPositions();
   }
 }
@@ -198,7 +201,6 @@ onMounted(() => {
   });
   cy.on("zoom", () => emit("zoom", Math.round(cy.zoom() * 100)));
   cy.on("dragfree", "node", () => {
-    ensureSpacing();
     recordPositions();
   });
   cy.on("mouseover", "node, edge", () => {
@@ -229,14 +231,15 @@ watch(
   applyVisibility,
 );
 watch(
-  () => [props.group, props.layout],
+  () => props.group,
   async () => {
     cy.stop(true, false);
     applyVisibility();
     await nextTick();
-    arrange();
+    fitArrangement();
   },
 );
+watch(() => props.layout, arrange);
 watch(() => props.density, (value, previous) => {
   if (!cy) return;
   cy.stop(true, false);

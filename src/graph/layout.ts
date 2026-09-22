@@ -17,14 +17,18 @@ export function scaleGraphSpacing(cy: Core, factor: number) {
     });
   }));
 }
-export function graphLayoutOptions(mode: string, count: number): LayoutOptions {
+export function graphLayoutOptions(mode: string, count: number, nodeExtent = 76): LayoutOptions {
   return mode === "circle"
     ? {
         name: "circle",
         animate: false,
+        fit: false,
         padding: 65,
-        avoidOverlap: true,
-        spacingFactor: 1.7,
+        // Cytoscape's default radius grows with the viewport and its overlap
+        // guard adds another 1.75x gap. Use measured nodes, then separate labels.
+        radius: count < 2 ? 0 : (nodeExtent + 28) / (2 * Math.sin(Math.PI / count)),
+        avoidOverlap: false,
+        spacingFactor: 1,
         nodeDimensionsIncludeLabels: true,
       }
     : ({
@@ -32,19 +36,20 @@ export function graphLayoutOptions(mode: string, count: number): LayoutOptions {
         quality: "default",
         randomize: true,
         animate: false,
+        fit: false,
         padding: 65,
         nodeDimensionsIncludeLabels: true,
-        nodeRepulsion: 20000,
-        idealEdgeLength: count > 80 ? 220 : 190,
+        nodeRepulsion: 4500,
+        idealEdgeLength: 65,
         edgeElasticity: 0.35,
         nestingFactor: 0.1,
         gravity: 0.12,
         numIter: count > 200 ? 1500 : 2500,
-        nodeSeparation: 110,
+        nodeSeparation: 32,
         packComponents: true,
         tile: true,
-        tilingPaddingVertical: 70,
-        tilingPaddingHorizontal: 70,
+        tilingPaddingVertical: 32,
+        tilingPaddingHorizontal: 32,
       } as LayoutOptions);
 }
 export function ensureGraphSpacing(cy: Core) {

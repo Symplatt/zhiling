@@ -8,6 +8,7 @@ import GraphCanvas from "./components/GraphCanvas.vue";
 import SelectionInspector from "./components/SelectionInspector.vue";
 import WorkspaceStatus from "./components/WorkspaceStatus.vue";
 import WorkspaceToast from "./components/WorkspaceToast.vue";
+import FullscreenHint from "./components/FullscreenHint.vue";
 </script>
 <template>
   <div class="app-shell" :class="{ 'graph-fullscreen': fullscreen }">
@@ -24,7 +25,8 @@ import WorkspaceToast from "./components/WorkspaceToast.vue";
       </main>
     </div>
 
-    <WorkspaceToast v-show="!fullscreen" />
+    <WorkspaceToast v-if="!fullscreen" />
+    <FullscreenHint :active="fullscreen" />
     <input
       :ref="(element) => (jsonInput = element as HTMLInputElement | undefined)"
       type="file"

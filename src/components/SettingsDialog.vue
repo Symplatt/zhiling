@@ -16,7 +16,8 @@ const {
 } = useWorkspaceContext();
 </script>
 <template>
-  <div>
+  <div class="settings-content">
+    <div class="settings-options">
     <div class="theme-grid">
       <button
         v-for="item in themes"
@@ -75,7 +76,7 @@ const {
       </select></label
     >
     <p class="dialog-copy">
-      自动布局会为角色留出间距。密集关系仍可能交叉，可放大查看或按阵营筛选。
+      1 档排列最紧凑。已有手动布局可点击左侧“自动布局”重新排列；密集关系仍可能交叉。
     </p>
     <fieldset class="density-setting">
       <legend>排列稀疏程度</legend>
@@ -106,12 +107,30 @@ const {
       </div>
     </fieldset>
     <ExportSettings />
+    </div>
     <div class="modal-actions">
       <button class="primary-button" @click="modal = ''">完成</button>
     </div>
   </div>
 </template>
 <style scoped>
+.settings-content {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+.settings-options {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 3px 5px;
+}
+.modal-actions {
+  flex-shrink: 0;
+  margin-top: 16px;
+  padding-top: 16px;
+}
 .density-setting {
   border: 0;
   padding: 0;

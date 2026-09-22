@@ -31,6 +31,7 @@ const {
         class="modal"
         :class="{
           'wide-modal': modal === 'character' || modal === 'library',
+          'settings-modal': modal === 'settings',
         }"
         role="dialog"
         aria-modal="true"
@@ -92,3 +93,14 @@ const {
       </section></div
   ></Teleport>
 </template>
+<style scoped>
+/* Keep the settings header and action area outside the scrolling options. */
+.modal.settings-modal {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.settings-modal > .modal-header {
+  flex-shrink: 0;
+}
+</style>

@@ -91,9 +91,13 @@ function arrange() {
   cy.nodes().stop(true, false);
   cy.resize();
   const count = cy.nodes(":visible").length;
+  const nodeExtent = Math.max(...cy.nodes(":visible").map(node => {
+    const box = node.boundingBox({ includeLabels: true, includeOverlays: false, includeUnderlays: false });
+    return Math.max(box.w, box.h);
+  }));
   activeLayout = cy
     .elements(":visible")
-    .layout(graphLayoutOptions(props.layout, count));
+    .layout(graphLayoutOptions(props.layout, count, nodeExtent));
   activeLayout.run();
   ensureSpacing();
   improveStraightLayout(cy);

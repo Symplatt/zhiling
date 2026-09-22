@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { FolderOpen } from 'lucide-vue-next'
 import { canChooseExportDirectory, chooseExportDirectory, loadExportSettings, saveExportSetting, type ExportKind, type ExportSettings } from '../exportSettings'
 const settings = ref<ExportSettings>()
 const error = ref(''), busy = ref(false)
@@ -20,14 +21,17 @@ async function change(kind: ExportKind, choose: boolean) {
 <template>
   <section class="export-settings" aria-label="导出位置设置">
     <h3>导出位置</h3>
-    <p class="form-note">两种文件分别设置；仅保存在本机。关闭询问后，同名文件自动编号。</p>
+    <p class="form-note">默认导出目录；不询问位置时，同名文件自动编号。</p>
     <div v-for="kind in kinds" :key="kind.id" class="destination">
       <template v-if="settings">
-        <div class="destination-path">
-          <span><strong>{{ kind.name }}</strong><small :title="settings[kind.id].directory">{{ settings[kind.id].directory || '浏览器默认下载位置' }}</small></span>
-          <button class="secondary-button" :aria-label="`选择 ${kind.name} 导出文件夹`" :disabled="busy || !canChooseExportDirectory" @click="change(kind.id, true)">选择文件夹</button>
+        <div class="destination-heading">
+          <strong>{{ kind.name }}</strong>
+          <label class="ask-location"><input type="checkbox" :aria-label="`每次导出 ${kind.name} 时询问位置`" :checked="settings[kind.id].ask" :disabled="busy || !canChooseExportDirectory || !settings[kind.id].directory" @change="change(kind.id, false)" />每次询问位置</label>
         </div>
-        <label class="ask-location"><input type="checkbox" :checked="settings[kind.id].ask" :disabled="busy || !canChooseExportDirectory || !settings[kind.id].directory" @change="change(kind.id, false)" />每次导出 {{ kind.name }} 时询问位置</label>
+        <div class="destination-path">
+          <span :title="settings[kind.id].directory">{{ settings[kind.id].directory || '浏览器默认下载位置' }}</span>
+          <button class="change-directory" :aria-label="`选择 ${kind.name} 导出文件夹`" :title="`更改 ${kind.name} 导出文件夹`" :disabled="busy || !canChooseExportDirectory" @click="change(kind.id, true)"><FolderOpen :size="16" /></button>
+        </div>
       </template>
     </div>
     <p v-if="!canChooseExportDirectory" class="form-note">此浏览器不支持选择文件夹，下载位置由浏览器管理；桌面版支持完整设置。</p>
@@ -37,12 +41,13 @@ async function change(kind: ExportKind, choose: boolean) {
 <style scoped>
 .export-settings { border-top: 1px solid var(--line); margin-top: 24px; padding-top: 16px; }
 h3 { font-size: 14px; margin: 0; }
-.destination { margin-top: 14px; }
-.destination-path { display: flex; align-items: center; gap: 16px; }
-.destination-path > span { flex: 1; min-width: 0; }
-.destination-path strong { font-size: 13px; }
-.destination-path small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); margin-top: 4px; }
-.destination-path button { flex-shrink: 0; }
-.ask-location { display: flex; flex-direction: row; justify-content: flex-start; align-items: center; gap: 8px; margin-top: 10px; font-size: 12px; }
-.ask-location input { width: 15px; height: 15px; margin: 0; accent-color: var(--green); }
+.destination { margin-top: 20px; }
+.destination-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 8px; flex-wrap: wrap; }
+.destination-heading strong { font-size: 12px; font-weight: 500; color: var(--muted); }
+.destination-path { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); }
+.destination-path > span { flex: 1; min-width: 0; overflow-wrap: anywhere; font-size: 14px; line-height: 1.5; color: var(--text); }
+.change-directory { display: grid; place-items: center; flex-shrink: 0; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 5px; background: transparent; color: var(--muted); }
+.change-directory:hover:not(:disabled) { background: var(--soft); color: var(--text); }
+.ask-location { display: flex; flex-direction: row; align-items: center; gap: 6px; margin: 0; font-size: 11px; font-weight: 400; color: var(--muted); }
+.ask-location input { width: 12px; height: 12px; margin: 0; accent-color: var(--muted); }
 </style>

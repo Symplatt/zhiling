@@ -8,19 +8,19 @@ const bitmap=Buffer.alloc(32*32*4);for(let i=0;i<bitmap.length;i+=4){bitmap[i]=2
 library.graphs[0].data.characters[0].avatar=nativeImage.createFromBitmap(bitmap,{width:32,height:32}).toDataURL()
 fs.writeFileSync(path.join(profile,'workspace/library.json'),JSON.stringify(library))
 app.setPath('userData',profile);app.setPath('sessionData',path.join(root,'session'))
-app.on('browser-window-created',(_,win)=>{win.hide();win.webContents.once('did-finish-load',async()=>{
+app.on('browser-window-created',(_,win)=>{win.hide();win.webContents.setBackgroundThrottling(false);win.webContents.once('did-finish-load',async()=>{
   try{
     await win.webContents.executeJavaScript(`new Promise((resolve,reject)=>{let n=0;const id=setInterval(()=>{if(document.body.innerText.includes('已自动保存')&&document.querySelector('.graph-engine canvas')){clearInterval(id);resolve()}else if(++n>150){clearInterval(id);reject(new Error('UI timed out'))}},50)})`)
     assert.equal(await win.webContents.executeJavaScript('document.title'),'织灵 · 角色关系网')
     const loaded=await win.webContents.executeJavaScript('window.desktop.load()');assert.equal(loaded.data.graphs.length,1)
     assert.equal(loaded.data.graphs[0].data.relations[0].label,'母亲/女儿')
     assert.equal(loaded.data.graphs[0].data.relations[0].mode,undefined)
-    assert.equal(loaded.data.layoutDensity,1)
+    assert.equal(loaded.data.layoutDensity,3)
     const baselineDistance=await win.webContents.executeJavaScript(`(() => {const cy=document.querySelector('.graph-engine')._cyreg.cy,a=cy.$id('c:a').position(),b=cy.$id('c:b').position();return Math.hypot(b.x-a.x,b.y-a.y)})()`)
     await win.webContents.executeJavaScript(`document.querySelector('[aria-label="图谱设置"]').click()`)
     await win.webContents.executeJavaScript(`document.querySelector('[aria-label="排列稀疏程度 5 档"]').click()`)
     const expandedDistance=await win.webContents.executeJavaScript(`(() => {const cy=document.querySelector('.graph-engine')._cyreg.cy,a=cy.$id('c:a').position(),b=cy.$id('c:b').position();return Math.hypot(b.x-a.x,b.y-a.y)})()`)
-    assert(Math.abs(expandedDistance/baselineDistance-1.8)<1e-6)
+    assert(Math.abs(expandedDistance/baselineDistance-1.4)<1e-6)
     await win.webContents.executeJavaScript(`new Promise((resolve,reject)=>{let n=0;const id=setInterval(async()=>{if((await window.desktop.load()).data.layoutDensity===5){clearInterval(id);resolve()}else if(++n>100){clearInterval(id);reject(new Error('Density save timed out'))}},50)})`)
     await win.webContents.executeJavaScript(`document.querySelector('[aria-label="关闭对话框"]').click()`)
     const beforeExport=await win.webContents.executeJavaScript(`(() => {

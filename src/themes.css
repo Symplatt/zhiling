@@ -85,10 +85,12 @@
   --shadow: #00000060;
   --on-accent: #211e17;
 }
-[data-theme="gold"] .character-list::-webkit-scrollbar-thumb {
+[data-theme="gold"]::-webkit-scrollbar-thumb,
+[data-theme="gold"] *::-webkit-scrollbar-thumb {
   background: #44413b;
 }
-[data-theme="gold"] .character-list::-webkit-scrollbar-thumb:hover {
+[data-theme="gold"]::-webkit-scrollbar-thumb:hover,
+[data-theme="gold"] *::-webkit-scrollbar-thumb:hover {
   background: #625b4c;
 }
 html,

@@ -124,7 +124,7 @@ const {
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 3px 5px;
+  padding: 3px 18px;
 }
 .modal-actions {
   flex-shrink: 0;

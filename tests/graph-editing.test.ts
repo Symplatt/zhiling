@@ -17,7 +17,7 @@ it('scales readable relation labels, ordinary and highlighted strokes together a
   try {
     for (let level = 1; level <= 5; level++) {
       applyGraphSize(cy, level)
-      const scale = 1 + (level - 1) * .2, edge = cy.$id('ab')
+      const scale = [0.6, 0.8, 1, 1.2, 1.4][level - 1]!, edge = cy.$id('ab')
       expect(parseFloat(edge.style('font-size'))).toBeCloseTo(15 * scale)
       expect(parseFloat(cy.$id('a').style('font-size'))).toBeCloseTo(15 * scale)
       expect(parseFloat(edge.style('width'))).toBeCloseTo(1.3 * scale)

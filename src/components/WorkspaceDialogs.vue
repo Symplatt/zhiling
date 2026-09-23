@@ -96,6 +96,8 @@ const {
 <style scoped>
 /* Keep the settings header and action area outside the scrolling options. */
 .modal.settings-modal {
+  width: 580px;
+  padding-inline: 36px;
   display: flex;
   flex-direction: column;
   overflow: hidden;

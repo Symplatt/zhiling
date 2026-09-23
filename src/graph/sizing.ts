@@ -1,9 +1,9 @@
 import type { Core } from 'cytoscape'
-import { densityScale } from '../layoutDensity'
+import { nodeSizeScale } from '../layoutDensity'
 
 /** Keep labels and strokes proportional, including the selected-edge overrides. */
 export function applyGraphSize(cy: Core, level: number) {
-  const scale = densityScale(level)
+  const scale = nodeSizeScale(level)
   cy.style()
     .selector('node').style({ width: 76 * scale, height: 76 * scale,
       'font-size': 15 * scale, 'text-max-width': `${66 * scale}px` })

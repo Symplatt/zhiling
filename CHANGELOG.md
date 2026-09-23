@@ -3,6 +3,26 @@
 本文件采用 Keep a Changelog 分类方式，版本号遵循语义化版本规范。
 从 **2.1.1** 起记录正式发布内容；更早版本不追溯补录，可查看 Git 历史与 GitHub Releases。
 
+## [2.1.4] - 2026-09-23
+
+### Added / 新增
+
+- 无。
+
+### Changed / 更新
+
+- 头像第 3 档对应原第 1 档；1–5 档直径为 45.6、60.8、76、91.2、106.4 像素，关系文字、线条及箭头同步缩放。
+- 稀疏程度第 3 档对应原第 5 档，相邻档位相差新基准的 20%；未设置或无效档位默认第 3 档。保留已有档位编号和手动位置。
+- 图谱设置窗口加宽至 580px，增加窗口两侧和滚动区域留白，完成按钮保持固定。
+
+### Removed / 删除
+
+- 停止逐版本新建和附带 TXT 使用说明；后续使用说明维护在 README，历史 TXT 保留。
+
+### Fixed / 修复
+
+- 黄金夜滚动条低亮度配色覆盖所有滚动区域，修复设置窗口等区域出现浅白滑块的问题。
+
 ## [2.1.3] - 2026-09-22
 
 ### Added / 新增
@@ -60,4 +80,5 @@
 
 [2.1.1]: https://github.com/Symplatt/zhiling/releases/tag/v2.1.1
 
-[2.1.3]: https://github.com/Symplatt/zhiling/releases/tag/v2.1.3
+[2.1.3]: https://github.com/Symplatt/zhiling/commit/b58a647
+[2.1.4]: https://github.com/Symplatt/zhiling/releases/tag/v2.1.4

@@ -25,17 +25,26 @@ export function useWorkspace() {
   const confirmation=ref<{title:string;description:string;action:()=>void;destructive:boolean}|null>(null)
   let toastTimer:ReturnType<typeof setTimeout>,saveNumber=0,pendingSaves=0
   const theme=computed(()=>library.value.theme)
+  const showAvatarNames=computed({get:()=>library.value.showAvatarNames!==false,set:(value:boolean)=>{library.value.showAvatarNames=value;void persist().catch(()=>{})}})
+  const lastEdited=computed(()=>library.value.graphs.find(s=>s.id===library.value.activeId)?.updatedAt||'')
   const nodeSize=computed({get:()=>parseLayoutDensity(library.value.nodeSize),set:(value:number)=>{library.value.nodeSize=parseLayoutDensity(value);void persist().catch(()=>{})}})
   const localPositions=computed(()=>library.value.localLayouts?.[library.value.activeId] || {})
   let layoutSaveTimer:ReturnType<typeof setTimeout>|undefined
   const draftBaseline=ref('')
   const activeDraft=computed(()=>modal.value==='character'?draftCharacter.value:modal.value==='relation'?draftRelation.value:modal.value==='project'?draftProject.value:null)
   const displaySaveStatus=computed(()=>saveStatus.value==='保存失败'||recoveryBlocked.value?saveStatus.value:activeDraft.value&&JSON.stringify(activeDraft.value)!==draftBaseline.value?'编辑中，尚未提交':saveStatus.value)
-  function rememberPositions(positions:NodePositions){
-    if(!ready.value||recoveryBlocked.value)return
-    if(JSON.stringify(localPositions.value)===JSON.stringify(positions))return
+  // Viewing, exporting and redundant saves must not appear as story edits.
+  function updatePositions(positions:NodePositions){
+    if(JSON.stringify(localPositions.value)===JSON.stringify(positions))return false
     library.value.localLayouts ||= Object.create(null)
     library.value.localLayouts![library.value.activeId]=positions
+    const entry=library.value.graphs.find(s=>s.id===library.value.activeId)
+    if(entry)entry.updatedAt=new Date().toISOString()
+    return true
+  }
+  function rememberPositions(positions:NodePositions){
+    if(!ready.value||recoveryBlocked.value)return
+    if(!updatePositions(positions))return
     ++saveNumber;saveStatus.value='有修改，等待保存';clearTimeout(layoutSaveTimer)
     layoutSaveTimer=setTimeout(()=>{layoutSaveTimer=undefined;void persist().catch(()=>{})},350)
   }
@@ -68,11 +77,11 @@ export function useWorkspace() {
   function closeFloating(){clearTimeout(hideTimer);floatingId.value='';pinnedId.value='';floatQuery.value=''}
   function notify(message:string,error=false){clearTimeout(toastTimer);toast.value=message;toastError.value=error;if(!error)toastTimer=setTimeout(()=>toast.value='',4200)}
   function errorMessage(e:unknown){return e instanceof Error?e.message.replace(/^Error invoking remote method '[^']+': Error: /,''):String(e)}
-  function syncCurrent(){const entry=library.value.graphs.find(s=>s.id===library.value.activeId);if(entry){entry.data=clone(data.value);entry.updatedAt=new Date().toISOString()}}
+  function syncCurrent(){const entry=library.value.graphs.find(s=>s.id===library.value.activeId);if(entry&&JSON.stringify(entry.data)!==JSON.stringify(data.value)){entry.data=clone(data.value);entry.updatedAt=new Date().toISOString()}}
   async function persist(showToast=false){
     if(!ready.value||recoveryBlocked.value)return
     clearTimeout(layoutSaveTimer);layoutSaveTimer=undefined;
-    if(graph.value?.storyId()===library.value.activeId){library.value.localLayouts ||= Object.create(null);library.value.localLayouts![library.value.activeId]=graph.value.positions()}
+    if(graph.value?.storyId()===library.value.activeId)updatePositions(graph.value.positions());
     syncCurrent();const number=++saveNumber;pendingSaves++;saveStatus.value='保存中…'
     try{await saveWorkspace(clone(library.value));if(number===saveNumber)saveStatus.value='已自动保存';if(showToast)notify('整个关系网书架已保存到本机')}
     catch(e){if(number===saveNumber)saveStatus.value='保存失败';notify(`保存失败：${errorMessage(e)}`,true);throw e}finally{pendingSaves--}
@@ -110,7 +119,7 @@ export function useWorkspace() {
   function askConfirmation(title:string,description:string,action:()=>void,destructive=false){confirmation.value={title,description,action,destructive};openModal('confirm')}
   function deleteCharacter(c:Character){askConfirmation(`删除「${c.name}」？`,`同时移除与该角色有关的 ${linked.value.length} 条关系。此操作可以撤销。`,()=>{commit(removeCharacter(data.value,c.id));select('none','');modal.value='';notify('角色已删除，可撤销恢复')},true)}
   function deleteRelation(r:Relation){askConfirmation('删除这条关系？',`${name(r.from)} ↔ ${name(r.to)} · ${relationLabel(r)}。此操作可以撤销。`,()=>{commit({...data.value,relations:data.value.relations.filter(old=>old.id!==r.id)});select('none','');modal.value=''},true)}
-  function activate(id:string){clearTimeout(layoutSaveTimer);layoutSaveTimer=undefined;if(graph.value?.storyId()===library.value.activeId){library.value.localLayouts ||= Object.create(null);library.value.localLayouts![library.value.activeId]=graph.value.positions()}syncCurrent();const entry=library.value.graphs.find(s=>s.id===id);if(!entry)return;library.value.activeId=id;data.value=clone(entry.data);query.value='';group.value='';undoStack.value=[];redoStack.value=[];closeFloating();closeInspector();select('none','');modal.value='';void persist().catch(()=>{})}
+  function activate(id:string){clearTimeout(layoutSaveTimer);layoutSaveTimer=undefined;if(graph.value?.storyId()===library.value.activeId)updatePositions(graph.value.positions());syncCurrent();const entry=library.value.graphs.find(s=>s.id===id);if(!entry)return;library.value.activeId=id;data.value=clone(entry.data);query.value='';group.value='';undoStack.value=[];redoStack.value=[];closeFloating();closeInspector();select('none','');modal.value='';void persist().catch(()=>{})}
   function addStory(atlas:Atlas){if(library.value.graphs.length>=1000)throw new Error('书架最多保存 1,000 张关系网。');syncCurrent();const entry=story(atlas);library.value.graphs.push(entry);activate(entry.id)}
   function newProject(){creatingProject.value=true;draftProject.value={title:'',copyFrom:''};openModal('project')}
   function editProject(){creatingProject.value=false;draftProject.value={title:data.value.title,copyFrom:''};openModal('project')}
@@ -189,5 +198,5 @@ export function useWorkspace() {
     }catch(e){ready.value=true;recoveryBlocked.value=true;saveStatus.value='需要恢复数据';notify(`本地书架未覆盖：${errorMessage(e)}`,true)}
   })
   onBeforeUnmount(()=>{document.removeEventListener('keydown',keydown);window.removeEventListener('beforeunload',beforeUnload);clearTimeout(toastTimer);clearTimeout(hideTimer);clearTimeout(layoutSaveTimer)})
-  return {fullscreen,toggleFullscreen,inspectorPinned,toggleInspectorPin,closeInspector,chooseCopySource,nodeSize,localPositions,rememberPositions,displaySaveStatus,layoutDensity,sortedCharacters,characterGroups,library,data,ready,recoveryBlocked,saveStatus,storageLabel,query,group,selectedId,selectedKind,labels,neighborhood,layout,inspector,zoom,graph,modal,formError,toast,toastError,jsonInput,draftCharacter,draftRelation,draftProject,creatingProject,bookQuery,books,isEditing,pendingImport,undoStack,redoStack,confirmation,theme,themes,groups,characters,character,relation,linked,selection,connectedPeople,name,relationLabel,relationFrom,hoverId,floatingId,pinnedId,floatQuery,floatingCharacter,floatingRows,enterCharacter,leaveCharacter,holdFloating,releaseFloating,pinCharacter,closeFloating,persist,undo,redo,select,openModal,editCharacter,submitCharacter,editRelation,submitRelation,deleteCharacter,deleteRelation,activate,newProject,editProject,submitProject,deleteStory,changeTheme,importJson,readJson,confirmImport,exportJson,exportImage,exporting,trapFocus,palette}
+  return {showAvatarNames,lastEdited,fullscreen,toggleFullscreen,inspectorPinned,toggleInspectorPin,closeInspector,chooseCopySource,nodeSize,localPositions,rememberPositions,displaySaveStatus,layoutDensity,sortedCharacters,characterGroups,library,data,ready,recoveryBlocked,saveStatus,storageLabel,query,group,selectedId,selectedKind,labels,neighborhood,layout,inspector,zoom,graph,modal,formError,toast,toastError,jsonInput,draftCharacter,draftRelation,draftProject,creatingProject,bookQuery,books,isEditing,pendingImport,undoStack,redoStack,confirmation,theme,themes,groups,characters,character,relation,linked,selection,connectedPeople,name,relationLabel,relationFrom,hoverId,floatingId,pinnedId,floatQuery,floatingCharacter,floatingRows,enterCharacter,leaveCharacter,holdFloating,releaseFloating,pinCharacter,closeFloating,persist,undo,redo,select,openModal,editCharacter,submitCharacter,editRelation,submitRelation,deleteCharacter,deleteRelation,activate,newProject,editProject,submitProject,deleteStory,changeTheme,importJson,readJson,confirmImport,exportJson,exportImage,exporting,trapFocus,palette}
 }

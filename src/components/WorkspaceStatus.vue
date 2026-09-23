@@ -1,8 +1,13 @@
 <script setup lang="ts">
 import { AlertCircle, CheckCheck, Link2, Users } from "lucide-vue-next";
 import { useWorkspaceContext } from "../workspaceContext";
-const { data, recoveryBlocked, displaySaveStatus: saveStatus, storageLabel } =
+import { computed } from 'vue';
+const { data, recoveryBlocked, displaySaveStatus: saveStatus, storageLabel, lastEdited } =
   useWorkspaceContext();
+const editedText = computed(() => {
+  const date = new Date(lastEdited.value);
+  return Number.isNaN(date.getTime()) ? '暂无记录' : date.toLocaleString('zh-CN', { hour12: false });
+});
 </script>
 <template>
   <footer class="status-bar">
@@ -18,5 +23,9 @@ const { data, recoveryBlocked, displaySaveStatus: saveStatus, storageLabel } =
         :size="14"
       />{{ saveStatus }}</span
     ><span class="local-badge">{{ storageLabel }}</span>
+    <span class="last-edited">最近编辑时间：<time :datetime="lastEdited">{{ editedText }}</time></span>
   </footer>
 </template>
+<style scoped>
+.last-edited { flex-shrink: 0; font-variant-numeric: tabular-nums; }
+</style>

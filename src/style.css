@@ -49,7 +49,7 @@ input:focus-visible,
 textarea:focus-visible,
 select:focus-visible,
 summary:focus-visible {
-  outline: 2px solid #629877;
+  outline: 2px solid var(--green);
   outline-offset: 3px;
 }
 button:not(:disabled):active {
@@ -1144,8 +1144,8 @@ button img {
 .modal input:focus,
 .modal textarea:focus,
 .modal select:focus {
-  border-color: #8da57b;
-  box-shadow: 0 0 0 2px #6d8c5310;
+  border-color: var(--green);
+  box-shadow: none;
 }
 .form-grid {
   display: grid;

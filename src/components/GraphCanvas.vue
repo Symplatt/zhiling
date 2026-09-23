@@ -21,6 +21,7 @@ const {
   layout,
   layoutDensity,
   nodeSize,
+  showAvatarNames,
   localPositions,
   rememberPositions,
   zoom,
@@ -57,6 +58,7 @@ const {
       :story-id="library.activeId"
       :positions="localPositions"
       :node-size="nodeSize"
+      :show-avatar-names="showAvatarNames"
       @positions="rememberPositions"
       :selected="selection"
       :group="group"

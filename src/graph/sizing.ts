@@ -1,6 +1,11 @@
 import type { Core } from 'cytoscape'
 import { nodeSizeScale } from '../layoutDensity'
 
+/** Keep the preference in the stylesheet so PNG snapshots use the same labels. */
+export function applyAvatarNames(cy: Core, visible: boolean) {
+  cy.style().selector('node.has-avatar').style({ label: visible ? 'data(label)' : '' }).update()
+}
+
 /** Keep labels and strokes proportional, including the selected-edge overrides. */
 export function applyGraphSize(cy: Core, level: number) {
   const scale = nodeSizeScale(level)

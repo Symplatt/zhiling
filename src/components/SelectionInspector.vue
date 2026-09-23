@@ -169,7 +169,7 @@ const {
           <p class="biography">
             {{
               relation.description ||
-              "还没有补充描述。记录他们相识的缘由，或关系变化的伏笔。"
+              "尚未补充描述"
             }}
           </p>
         </section>

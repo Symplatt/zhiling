@@ -3,7 +3,7 @@ import cytoscape, { type Core } from "cytoscape";
 import fcose from "cytoscape-fcose";
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { graphLayoutOptions, ensureGraphSpacing, scaleGraphSpacing } from "../graph/layout";
-import { applyGraphSize } from '../graph/sizing';
+import { applyGraphSize, applyAvatarNames } from '../graph/sizing';
 import { placeNewNodes } from '../graph/incrementalLayout';
 import { densityScale } from "../layoutDensity";
 import { graphPositions, type NodePositions } from "../localLayout";
@@ -28,6 +28,7 @@ const props = defineProps<{
   layout: string;
   density: number;
   nodeSize: number;
+  showAvatarNames: boolean;
   positions: NodePositions;
   theme: string;
 }>();
@@ -99,8 +100,12 @@ function arrange() {
     .elements(":visible")
     .layout(graphLayoutOptions(props.layout, count, nodeExtent));
   activeLayout.run();
-  ensureSpacing();
-  improveStraightLayout(cy);
+  // Moving individual nodes after a circle layout destroys its equal angles
+  // and radii. Only natural layouts may use collision/edge corrections.
+  if (props.layout !== 'circle') {
+    ensureSpacing();
+    improveStraightLayout(cy);
+  }
   scaleGraphSpacing(cy, densityScale(props.density));
   fitArrangement();
   recordPositions();
@@ -169,6 +174,7 @@ function sync() {
   applyVisibility();
   separateRelationshipLabels(cy);
   applyNodeSize();
+  applyAvatarNames(cy, props.showAvatarNames);
   if (firstLoad && props.data.characters.length && props.data.characters.every(c => props.positions[c.id])) {
     priorIds = ids;
     fitArrangement();
@@ -177,6 +183,11 @@ function sync() {
     arrange();
   } else {
     const added = cy.nodes().toArray().some(n => !positions.has(n.id()));
+    if (props.layout === 'circle' && (added || positions.size !== cy.nodes().length)) {
+      priorIds = ids;
+      arrange();
+      return;
+    }
     placeNewNodes(cy, new Set(positions.keys()), 190 * densityScale(props.density));
     priorIds = ids;
     if (added) fitArrangement();
@@ -255,9 +266,15 @@ watch(() => props.density, (value, previous) => {
 watch(() => props.nodeSize, () => {
   if (!cy) return;
   applyNodeSize();
+  if (props.layout === 'circle') { arrange(); return; }
   ensureSpacing();
   fitArrangement();
   recordPositions();
+});
+watch(() => props.showAvatarNames, value => {
+  if (!cy) return;
+  applyAvatarNames(cy, value);
+  fitArrangement();
 });
 function focus(id: string) {
   const node = cy?.getElementById(`c:${id}`);

@@ -9,6 +9,7 @@ const {
   layout,
   layoutDensity,
   nodeSize,
+  showAvatarNames,
   modal,
   theme,
   themes,
@@ -36,6 +37,15 @@ const {
         ><strong>{{ item.name }}</strong
         ><small>{{ item.description }}</small>
       </button>
+    </div>
+    <div class="setting-row">
+      <div>
+        <strong>已有头像角色显示角色名</strong>
+        <p>仅影响图谱和导出图片中已有头像的角色</p>
+      </div>
+      <button class="switch" :class="{ on: showAvatarNames }" role="switch"
+        :aria-checked="showAvatarNames" aria-label="已有头像角色显示角色名"
+        @click="showAvatarNames = !showAvatarNames"><i></i></button>
     </div>
     <div class="setting-row">
       <div>
@@ -75,9 +85,6 @@ const {
         <option value="circle">环形分布</option>
       </select></label
     >
-    <p class="dialog-copy">
-      1 档排列最紧凑。已有手动布局可点击左侧“自动布局”重新排列；密集关系仍可能交叉。
-    </p>
     <fieldset class="density-setting">
       <legend>排列稀疏程度</legend>
       <div class="density-levels">

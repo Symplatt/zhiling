@@ -6,7 +6,7 @@ README也是ChatGPT生成的，开发者自己都没看完过，反正UI清晰�
 
 ## 打开软件
 
-从 [GitHub Releases](https://github.com/Symplatt/zhiling/releases/latest) 下载 **Zhiling-Setup-2.1.4.exe**。在 Windows 10/11（64 位）上双击安装包，它会自动安装到当前用户目录、创建“织灵（桌面版）”快捷方式并打开软件。不需要 Python、Node.js、浏览器或联网下载依赖。以后双击该快捷方式即可。给别人使用时发送安装包即可。从 2.1.4 起不再每次生成 TXT 说明，使用方法见本页。
+从 [GitHub Releases](https://github.com/Symplatt/zhiling/releases/latest) 下载 **Zhiling-Setup-2.1.5.exe**。在 Windows 10/11（64 位）上双击安装包，它会自动安装到当前用户目录、创建“织灵（桌面版）”快捷方式并打开软件。不需要 Python、Node.js、浏览器或联网下载依赖。以后双击该快捷方式即可。给别人使用时发送安装包即可。从 2.1.4 起不再每次生成 TXT 说明，使用方法见本页。
 
 安装包不包含你的私人关系网。需要转移作品时，在原软件导出完整书架 JSON，然后在新电脑导入。卸载程序默认保留作品数据。
 

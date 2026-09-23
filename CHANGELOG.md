@@ -3,6 +3,13 @@
 本文件采用 Keep a Changelog 分类方式，版本号遵循语义化版本规范。
 从 **2.1.1** 起记录正式发布内容；更早版本不追溯补录，可查看 Git 历史与 GitHub Releases。
 
+## [2.1.5] - 2026-09-23
+
+### Fixed / 修复
+
+- 图谱设置打开时不再自动聚焦稀疏程度第 1 档，避免未选中档位出现误导性的金色外框以及窗口自动滚动。
+- 档位外框仅用于键盘焦点提示，保留 Tab 和方向键操作；当前选择仍以填充色和边框标识。
+
 ## [2.1.4] - 2026-09-23
 
 ### Added / 新增
@@ -82,3 +89,4 @@
 
 [2.1.3]: https://github.com/Symplatt/zhiling/commit/b58a647
 [2.1.4]: https://github.com/Symplatt/zhiling/releases/tag/v2.1.4
+[2.1.5]: https://github.com/Symplatt/zhiling/releases/tag/v2.1.5

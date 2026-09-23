@@ -160,7 +160,15 @@ export function useWorkspace() {
   }
   function keydown(e:KeyboardEvent){if(e.key==='Escape'){modal.value='';return}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();void persist(true).catch(()=>{});return}const editing=(e.target as HTMLElement)?.matches('input,textarea,select,[contenteditable]');if(!editing&&!modal.value&&(e.ctrlKey||e.metaKey)){if(e.key.toLowerCase()==='z'){e.preventDefault();e.shiftKey?redo():undo()}if(e.key.toLowerCase()==='y'){e.preventDefault();redo()}}}
   function beforeUnload(e:BeforeUnloadEvent){if(pendingSaves||layoutSaveTimer||saveStatus.value==='保存失败'||displaySaveStatus.value==='编辑中，尚未提交'){e.preventDefault();e.returnValue=''}}
-  watch(modal,value=>{if(value)setTimeout(()=>(document.querySelector<HTMLElement>('.modal input:not([type=file])')||document.querySelector<HTMLElement>('.modal button'))?.focus(),50)})
+  watch(modal,value=>{
+    if(value)setTimeout(()=>{
+      if(modal.value!==value)return;
+      // Settings start at the close button; focusing the first radio falsely
+      // emphasises level 1 and scrolls past the dialog heading on every open.
+      const input=value==='settings'?null:document.querySelector<HTMLElement>('.modal input:not([type=file])');
+      (input||document.querySelector<HTMLElement>('.modal button'))?.focus({preventScroll:true});
+    },50)
+  })
   function trapFocus(e:KeyboardEvent){if(e.key!=='Tab')return;const elements=[...(e.currentTarget as HTMLElement).querySelectorAll<HTMLElement>('button:not(:disabled),input:not([type=file]),textarea,select,[tabindex="0"]')].filter(el=>el.offsetParent!==null),first=elements[0],last=elements.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus()}}
   onMounted(async()=>{
     document.addEventListener('keydown',keydown);window.addEventListener('beforeunload',beforeUnload)

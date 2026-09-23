@@ -165,7 +165,7 @@ const {
   border-color: var(--green);
   background: var(--soft);
 }
-.density-levels label:focus-within {
+.density-levels label:has(input:focus-visible) {
   outline: 2px solid var(--green);
   outline-offset: 3px;
 }
